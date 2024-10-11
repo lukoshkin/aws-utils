@@ -3,9 +3,12 @@
 source "$(dirname $0)/login.sh"
 
 function help_msg() {
-  printf "Usage: %s [OPTIONS] SRC [DST]\n" "$0"
+  printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
   echo "Copy file from SRC to DST."
+  echo 'To copy from local to host (EC2 instance), prefix with `UPLOAD= `'
+  echo
   echo "If DST is not provided, it defaults to SRC"
+  echo "One can configure defaults using $HOME_LOGIN_CFG"
   echo
   echo "Options:"
   echo "  -h, --help        Show this help message and exit"
