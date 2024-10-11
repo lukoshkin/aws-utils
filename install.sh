@@ -8,7 +8,9 @@ link_ec2() {
   INSTALL_PATH=$PWD
 }
 
-echo "Using ${INSTALL_PATH:='~/.config/aws-utils'} as install path"
+_DEFAULT_INSTALL_PATH=${XDG_CONFIG_HOME:-$HOME/.config}/aws-utils
+echo "Using ${INSTALL_PATH:=${_DEFAULT_INSTALL_PATH}} as install path"
+
 if [[ -d ${INSTALL_PATH} ]]; then
   cd "$INSTALL_PATH" && {
     git pull

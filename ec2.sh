@@ -20,7 +20,7 @@ ec2() {
     ;;
   *)
     echo "Usage: ec2 {connect|scp-file|porfowar} [args]"
-    echo "More about usage here: <link-to-the-repo>"
+    echo "More about the usage here: https://github.com/lukoshkin/aws-utils/tree/master"
     ;;
   esac
 }
