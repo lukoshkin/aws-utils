@@ -4,7 +4,7 @@ source "$(dirname $0)/login.sh"
 
 function fetch_images() {
   local fid=$1
-  local fid_prefix=/home/ubuntu/assets/${TASK:-detector}/single_run
+  local fid_prefix=/home/$EC2_USER/assets/${TASK:-detector}/single_run
   local folder=${fid_prefix}/${fid}/inference_results_from_callback
   local rm_cmd="rm -rf /tmp/$fid{,.tar.gz}" # remove previous copies/downloads if any
 

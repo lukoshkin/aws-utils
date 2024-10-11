@@ -29,7 +29,58 @@ login::maybe_set_login_string() {
   echo $msg
 }
 
+valid_instance_id_check() {
+  [[ $1 =~ ^i- ]] || {
+    echo "Invalid instance id: <$1>"
+    return 1
+  }
+}
 
+login::start_ec2_instances() {
+  for instance_id in "$@"; do
+    valid_instance_id_check "$instance_id" || return 1
+  done
+
+  aws ec2 start-instances --instance-ids "$@"
+}
+
+login::add_ip4_to_sg() {
+  valid_instance_id_check "$1" || return 1
+
+  local ip4
+  local instance_id=$1
+  ip4=$(curl -s ifconfig.me)
+
+  local sg_id
+  sg_id=$(
+    aws ec2 describe-instances \
+      --instance-ids "$instance_id" \
+      --query 'Reservations[*].Instances[*].SecurityGroups[*].GroupId' \
+      --output text
+  )
+  aws ec2 revoke-security-group-ingress \
+    --group-id "$sg_id" \
+    --protocol tcp \
+    --port 22 \
+    --cidr "$ip4/32" &>/dev/null
+  aws ec2 authorize-security-group-ingress \
+    --group-id "$sg_id" \
+    --protocol tcp \
+    --port 22 \
+    --cidr "$ip4/32" &>/dev/null
+}
+
+login::ec2_public_ip_from_instance_id() {
+  valid_instance_id_check "$1" || return 1
+  local instance_id=$1
+  aws ec2 describe-instances \
+    --instance-ids "$instance_id" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' \
+    --output text
+}
+
+EC2_USER=$(login::get_cfg_entry user $HOME_LOGIN_CFG)
+EC2_USER=${EC2_USER:-'ubuntu'}
 AWS_SSH_KEY=$(login::get_cfg_entry sshkey $HOME_LOGIN_CFG)
 AWS_SSH_KEY=${AWS_SSH_KEY:-'~/.ssh/convai-qoreai.pem'}
 # -i <...>.pem ─ login key pair (created during EC2 instance launch on AWS)
