@@ -2,6 +2,17 @@
 
 Easy management of AWS EC2 instances
 
+## Prerequisites
+
+1. Install `aws` command line utility. Follow the guidelines [
+   here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html#getting-started-install-instructions)
+1. Configure an access to AWS resources.  
+   For example, go through `aws configure`
+
+1. Create and populate `~/.ec2_login_opts`.  
+   You should specify at least which ssh key to use.  
+   `ec2_login_opts.example` will help.
+
 ## Usage
 
 1. **Connect** (or resume and connect) to an EC2 instance
@@ -28,27 +39,42 @@ Easy management of AWS EC2 instances
    (Not implemented yet.)
 
 3. **Forward ports** (Por favor)
+
    ```bash
    ec2 porfowar  # default port is 6006
    PORT=8080 ec2 porfowar
    ```
 
+4. **Shutdown from the client**  
+   Clears `$TMP_LOGIN_OPTS` and shuts down the instance.  
+   If `$TMP_LOGIN_OPTS` does not exist, will use 'instance_id' from `$HOME_LOGIN_OPTS`
+
+   ```bash
+   ec2 dicsconnect
+   ```
+
 ## Installation
 
 1. With `curl` _(preferred)_
+
    ```bash
    curl -fsSL https://raw.githubusercontent.com/lukoshkin/aws-utils/refs/heads/master/install.sh | bash
    ```
+
 2. With `git`
+
    ```bash
    git clone https://github.com/lukoshkin/aws-utils.git
    INSTALL_PATH=$XDG_CONFIG_HOME/aws-utils bash install.sh
    ```
+
    `$XDG_CONFIG_HOME/aws-utils` is a default folder when running the
    `install.sh` from outside of directory (useful for the previous approach).
-   If executing withing the git-folder then it is `$PWD`.
+   If executing within the git-folder then it is `$PWD`.
+
 3. Custom installation by linking to another place that's on the `$PATH`.
    For example, if someone prefers to keep executables in `$HOME/.local/bin`:
+
    ```bash
    git clone https://github.com/lukoshkin/aws-utils.git
    ln -s "$(readlink -f ec2.sh)" $HOME/.local/bin/ec2
@@ -60,8 +86,9 @@ Easy management of AWS EC2 instances
 - [x] Add `ec2` executable
 - [x] Add installation
 - [ ] Add customization of defaults in `~/.ec2_login_opts`
-- [ ] Add `disconnect` subcommand  
+- [x] Add `disconnect` subcommand  
        (unlike `sudo shutdown -h now` on the host, it should also manage  
        clearing the cached values in `/tmp/ec2_last_login_opts`)
 - [ ] Manage more than one EC2 instance
+- [ ] Add bash/zsh completions for ec2
 - [ ] Rename/move/migrate to "aws-cli-utils"?

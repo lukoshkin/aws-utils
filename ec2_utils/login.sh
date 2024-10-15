@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HOME_LOGIN_CFG=~/.ec2_login_opts
+HOME_LOGIN_CFG=${EC2_LOGIN_CFG_PATH:-~/.ec2_login_opts}
 TMP_LOGIN_CFG=/tmp/ec2_last_login_opts
 TMP_LOGIN_LOG=/tmp/ec2_last_login.log
 
@@ -79,10 +79,9 @@ login::ec2_public_ip_from_instance_id() {
     --output text
 }
 
-EC2_USER=$(login::get_cfg_entry user $HOME_LOGIN_CFG)
+AWS_SSH_KEY=$(login::get_cfg_entry sshkey "$HOME_LOGIN_CFG")
+EC2_USER=$(login::get_cfg_entry user "$HOME_LOGIN_CFG")
 EC2_USER=${EC2_USER:-'ubuntu'}
-AWS_SSH_KEY=$(login::get_cfg_entry sshkey $HOME_LOGIN_CFG)
-AWS_SSH_KEY=${AWS_SSH_KEY:-'~/.ssh/convai-qoreai.pem'}
 # -i <...>.pem ─ login key pair (created during EC2 instance launch on AWS)
 # -o UserKnownHostsFile=/dev/null ─ do not pollute known_hosts with a varying IP
 # -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint

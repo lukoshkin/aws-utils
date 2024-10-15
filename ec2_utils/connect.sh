@@ -49,6 +49,8 @@ function connect() {
     login::start_ec2_instances "$instance_id"
     login::add_ip4_to_sg "$instance_id"
     user_input=$(login::ec2_public_ip_from_instance_id "$instance_id")
+    echo "Idle for the next 2 seconds for the actions to take effect..."
+    sleep 2
   fi
 
   local login_and_host workdir
