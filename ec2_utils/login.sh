@@ -1,8 +1,8 @@
 #!/bin/bash
 
 HOME_LOGIN_CFG=${EC2_LOGIN_CFG_PATH:-~/.ec2_login_opts}
-TMP_LOGIN_CFG=/tmp/ec2_last_login_opts
-TMP_LOGIN_LOG=/tmp/ec2_last_login.log
+TMP_LOGIN_CFG=/tmp/ec2_$USER-last_login_opts
+TMP_LOGIN_LOG=/tmp/ec2_$USER-last_login.log
 
 login::get_cfg_entry() {
   local key=$1
@@ -24,6 +24,7 @@ login::maybe_set_login_string() {
   msg="Using ${LOGINSTR:=$(login::get_cfg_entry logstr)} as login string"
   [[ -z $LOGINSTR ]] && {
     echo "No login string found"
+    echo 'Did you forget to run `ec2 connect`?'
     exit 1
   }
   echo $msg

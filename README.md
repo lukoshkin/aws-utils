@@ -19,7 +19,7 @@ Easy management of AWS EC2 instances
 
    ```bash
    ec2 connect  # using the value of `instance_id` key in '~/.ec2_login_opts'
-   ec2 connect 10.111.101.01  # using IP4 (caches also "login and host string" to '/tmp/ec2_last_login_opts')
+   ec2 connect 10.111.101.01  # using IP4 (caches also "login and host string" to '/tmp/ec2_$USER-last_login_opts')
    ec2 connect ubuntu@ec2-10-111-101-01.compute-1.amazonaws.com  # using "login and host string"
    ec2 connect  # using the cached value of "login and host string"
    ```
@@ -80,6 +80,18 @@ Easy management of AWS EC2 instances
    ln -s "$(readlink -f ec2.sh)" $HOME/.local/bin/ec2
    ```
 
+## Configuration
+
+Improve your user experience with `~/.ec2_login_opts`.  
+Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
+
+- `sshkey` - path to your key pair used for connecting to the machine
+- `workdir` - the directory you get in after ssh login (scope: `ec2 connect`)
+- `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
+- `idle_on_first_login` - extra sleep time on the first login after resuming the machine
+- `instance_id` - static id of the EC2 instance. It allows to fetch IP4 address  
+  without explicitly specifying it in the command
+
 ## TODO
 
 - [x] Add README
@@ -88,7 +100,7 @@ Easy management of AWS EC2 instances
 - [ ] Add customization of defaults in `~/.ec2_login_opts`
 - [x] Add `disconnect` subcommand  
        (unlike `sudo shutdown -h now` on the host, it should also manage  
-       clearing the cached values in `/tmp/ec2_last_login_opts`)
+       clearing the cached values in `/tmp/ec2_$USER-last_login_opts`)
 - [ ] Manage more than one EC2 instance
 - [ ] Add bash/zsh completions for ec2
 - [ ] Rename/move/migrate to "aws-cli-utils"?

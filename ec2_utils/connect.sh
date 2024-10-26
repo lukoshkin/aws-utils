@@ -46,11 +46,37 @@ function connect() {
     echo "to automatically add dynamic IP to the security group inbound rules"
     echo -e "\033[0m"
   elif [[ -z $user_input ]]; then
-    login::start_ec2_instances "$instance_id"
-    login::add_ip4_to_sg "$instance_id"
+    local ec2_state
+    ec2_state=$(
+      aws ec2 describe-instances \
+        --instance-ids $instance_id \
+        --query 'Reservations[*].Instances[*].State.Name' \
+        --output text
+    )
+    if ! [[ $ec2_state =~ (stopped|running) ]]; then
+      echo "The machine is currently in a transient state: $ec2_state"
+      echo 'Re-run the command in a few seconds'
+      echo 'Use the following command to check the status manually:'
+      echo 'aws ec2 describe-instances \\'
+      echo "  --instance-ids $instance_id \\"
+      echo '  --query "Reservations[*].Instances[*].State.Name" \\'
+      echo '  --output text'
+      return 1
+    fi
+    if [[ $ec2_state = stopped ]]; then
+      login::start_ec2_instances "$instance_id"
+      login::add_ip4_to_sg "$instance_id"
+      echo "Idle until the instance is in 'pending' state.."
+      aws ec2 wait instance-running --instance-ids "$instance_id"
+
+      local sleep_time
+      sleep_time=$(login::get_cfg_entry idle_on_first_login)
+      sleep_time=${sleep_time:-5}
+      echo -n "Idle for another ${sleep_time} seconds"
+      echo " for all actions to take effect.."
+      sleep "$sleep_time"
+    fi
     user_input=$(login::ec2_public_ip_from_instance_id "$instance_id")
-    echo "Idle for the next 2 seconds for the actions to take effect..."
-    sleep 2
   fi
 
   local login_and_host workdir
