@@ -18,6 +18,9 @@ ec2() {
   scp-file)
     bash "$_PARENT_DIR"/scp_file.sh "$@"
     ;;
+  sync)
+    bash "$_PARENT_DIR"/sync.sh "$@"
+    ;;
   porfowar)
     bash "$_PARENT_DIR"/porforwar.sh "$@"
     ;;

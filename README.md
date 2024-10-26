@@ -53,6 +53,21 @@ Easy management of AWS EC2 instances
    ec2 dicsconnect
    ```
 
+5. **Sync host folder with its counterpart on the client**
+
+   Imagine you are working on an app that accesses Amazon's Redshift and
+   Bedrock services. You configured the access by attaching an appropriate role
+   to your EC2 instance. But working on the code and testing it on the EC2 is
+   not so convenient. In this case, you can continue work on your workstation
+   and just sync and run tests remotely.
+
+   ```bash
+   ec2 sync ~/aws-utils '~/aws-utils'  # update host files tracked by git with respective new ones on the client
+   ec2 sync -a ~/aws-utils '~/aws-utils'  # update all host files, not just those tracked by git
+   ec2 sync -n ~/aws-utils '~/aws-utils'  # do not update anything, just print what will be updated
+   ec2 sync -e="bash run_some_tests.sh" ~/aws-utils '~/aws-utils'  # run a command after sync
+   ```
+
 ## Installation
 
 1. With `curl` _(preferred)_
@@ -89,6 +104,7 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 - `workdir` - the directory you get in after ssh login (scope: `ec2 connect`)
 - `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
 - `idle_on_first_login` - extra sleep time on the first login after resuming the machine
+- `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)
 - `instance_id` - static id of the EC2 instance. It allows to fetch IP4 address  
   without explicitly specifying it in the command
 
@@ -97,7 +113,7 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 - [x] Add README
 - [x] Add `ec2` executable
 - [x] Add installation
-- [ ] Add customization of defaults in `~/.ec2_login_opts`
+- [x] Add customization of defaults in `~/.ec2_login_opts`
 - [x] Add `disconnect` subcommand  
        (unlike `sudo shutdown -h now` on the host, it should also manage  
        clearing the cached values in `/tmp/ec2_$USER-last_login_opts`)

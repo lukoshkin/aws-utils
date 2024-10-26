@@ -106,9 +106,7 @@ function check_destination() {
 }
 
 function scp_file() {
-  login::maybe_set_login_string
-  CUSTOM_ES=21
-
+  local CUSTOM_ES=21
   local long_opts="tar,gzip,help"
   local short_opts="t,z,h"
   local params
@@ -144,12 +142,18 @@ function scp_file() {
 
   shift 1
   local src=$1
-  local dst=${2:-$src}
+  local dst=${2:-$(
+    login::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
+  )}
+  local dst=${dst:-$src}
   [[ -z $src ]] && {
     echo Missing source file to copy
     help_msg
     return 1
   }
+  login::maybe_set_login_string
+
+  ## Copying a single file
   [[ -z $via_tar ]] && {
     [[ -n $gz ]] && {
       echo "Ignoring --gzip option since it is only valid with --tar option"
@@ -171,6 +175,7 @@ function scp_file() {
     return 1
   }
 
+  ## Copying a folder
   local target tar_cmd rm_cp_cmd
   target=$(get_stem "$src")
   tar_cmd=$(get_tar_cmd "$target" $gz)
