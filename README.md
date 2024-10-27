@@ -38,22 +38,7 @@ Easy management of AWS EC2 instances
    One can configure default destination paths for uploads and downloads in `~/.ec2_login_opts`.  
    (Not implemented yet.)
 
-3. **Forward ports** (Por favor)
-
-   ```bash
-   ec2 porfowar  # default port is 6006
-   PORT=8080 ec2 porfowar
-   ```
-
-4. **Shutdown from the client**  
-   Clears `$TMP_LOGIN_OPTS` and shuts down the instance.  
-   If `$TMP_LOGIN_OPTS` does not exist, will use 'instance_id' from `$HOME_LOGIN_OPTS`
-
-   ```bash
-   ec2 dicsconnect
-   ```
-
-5. **Sync host folder with its counterpart on the client**
+3. **Sync host folder with its counterpart on the client**
 
    Imagine you are working on an app that accesses Amazon's Redshift and
    Bedrock services. You configured the access by attaching an appropriate role
@@ -66,6 +51,21 @@ Easy management of AWS EC2 instances
    ec2 sync -a ~/aws-utils '~/aws-utils'  # update all host files, not just those tracked by git
    ec2 sync -n ~/aws-utils '~/aws-utils'  # do not update anything, just print what will be updated
    ec2 sync -e="bash run_some_tests.sh" ~/aws-utils '~/aws-utils'  # run a command after sync
+   ```
+
+4. **Forward ports** (Por favor)
+
+   ```bash
+   ec2 porfowar  # default port is 6006
+   PORT=8080 ec2 porfowar
+   ```
+
+5. **Shutdown from the client**  
+   Clears `$TMP_LOGIN_OPTS` and shuts down the instance.  
+   If `$TMP_LOGIN_OPTS` does not exist, will use `instance_id` from `$HOME_LOGIN_OPTS`
+
+   ```bash
+   ec2 dicsconnect
    ```
 
 ## Installation
@@ -100,13 +100,28 @@ Easy management of AWS EC2 instances
 Improve your user experience with `~/.ec2_login_opts`.  
 Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 
+- `instance_id` - static id of the EC2 instance  
+   It allows to fetch IP4 address without explicitly specifying it in the command
 - `sshkey` - path to your key pair used for connecting to the machine
 - `workdir` - the directory you get in after ssh login (scope: `ec2 connect`)
 - `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
 - `idle_on_first_login` - extra sleep time on the first login after resuming the machine
-- `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)
-- `instance_id` - static id of the EC2 instance. It allows to fetch IP4 address  
-  without explicitly specifying it in the command
+- `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)  
+   If not specified, defaults to `$src`
+
+## Completions
+
+After having installed `ec2`, one can install also shell completions
+
+```bash
+ec2 install-completions  # will install for the login shell
+```
+
+Or to install to a specific shellrc file (either zhsrc, bashrc or `~/.bash_profile.sh`)
+
+```bash
+ec2 install-completions shellrc_file
+```
 
 ## TODO
 
@@ -117,6 +132,6 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 - [x] Add `disconnect` subcommand  
        (unlike `sudo shutdown -h now` on the host, it should also manage  
        clearing the cached values in `/tmp/ec2_$USER-last_login_opts`)
+- [x] Add bash/zsh completions for ec2
 - [ ] Manage more than one EC2 instance
-- [ ] Add bash/zsh completions for ec2
 - [ ] Rename/move/migrate to "aws-cli-utils"?
