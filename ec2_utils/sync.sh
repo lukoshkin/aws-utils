@@ -10,15 +10,16 @@ function help_msg() {
   echo "One can configure defaults using $HOME_LOGIN_CFG"
   echo
   echo "Options:"
-  echo "  -h, --help            Show this help message and exit"
-  echo "  -e, --execute         The command to execute after sync"
-  echo "  -a, --all-files       Ensure all files are synced"
-  echo "  -n, --dry-run         Make trial run without making any changes"
+  echo "  -h, --help                   Show this help message and exit"
+  echo "  -e, --execute                The command to execute after sync"
+  echo "  -a, --all-files              Ensure all files are synced"
+  echo "  -n, --dry-run                Make trial run without making any changes"
+  echo "  --client-always-right        Update with client files even if their modify-times are older"
 }
 
 function sync_remote_with_client() {
   local CUSTOM_ES=21
-  local long_opts="execute:,all-files,dry-run,help"
+  local long_opts="execute:,all-files,client-always-right,dry-run,help"
   local short_opts="e:,a,n,h"
   local params
 
@@ -28,7 +29,7 @@ function sync_remote_with_client() {
   }
   eval set -- "$params"
 
-  local sync_command all_files=false dry_run
+  local sync_command all_files=false no_update=false dry_run=-v
   sync_command=$(login::get_cfg_entry sync_command)
   sync_command=${sync_command:-$(
     login::get_cfg_entry sync_cmd "$HOME_LOGIN_CFG"
@@ -41,15 +42,19 @@ function sync_remote_with_client() {
       return
       ;;
     -e | --execute)
-      sync_command=$2
+      sync_command=${2#=}
       shift 2
       ;;
     -a | --all-files)
       all_files=true
       shift
       ;;
+    --client-always-right)
+      no_update=true
+      shift
+      ;;
     -n | --dry-run)
-      dry_run='-n'
+      dry_run=-nv
       shift
       ;;
     *)
@@ -73,12 +78,15 @@ function sync_remote_with_client() {
 
   login::maybe_set_login_string
   declare -a rest_opts_and_args=(
-    -avz
+    -az
     --progress
     --update
-    "${src}/"
+    "${src%/}"
     "${LOGINSTR}:$dst"
   )
+  $no_update && unset 'rest_opts_and_args[2]'
+  ## Since we run without `eval`, `dry_run` can't be empty.
+  ## Or will be treated as an empty argument otherwise
   if [[ -d $src/.git ]] && ! $all_files; then
     rsync "$dry_run" \
       -e "ssh ${AWS_SSH_OPTS[*]}" \
@@ -91,12 +99,12 @@ function sync_remote_with_client() {
   fi
 
   if [[ -n $sync_command ]]; then
-    if [[ -n $dry_run ]]; then
+    if [[ $dry_run =~ 'n' ]]; then
       echo Executing command..
       echo "<$sync_command>"
       return
     fi
-    ssh "${AWS_SSH_OPTS[*]}" "$LOGINSTR" "$sync_command"
+    ssh "${AWS_SSH_OPTS[@]}" "$LOGINSTR" "cd $dst && $sync_command"
   fi
 }
 

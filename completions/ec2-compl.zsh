@@ -30,6 +30,7 @@ _ec2_completions() {
             '(-a --all-files)'{-a,--all-files}'[Sync over all files on the client]' \
             '(-e --execute)'{-e+,--execute=}'[Execute command after sync]::_nothing' \
             '(-n --dry-run)'{-n,--dry-run}'[Show changes without applying them]' \
+            '--client-always-right[Update with client files even if their modify-times are older]' \
             '1:Source directory:_files -/' \
             '2:Target directory:_files -/'
           ;;

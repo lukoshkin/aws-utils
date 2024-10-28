@@ -51,6 +51,7 @@ Easy management of AWS EC2 instances
    ec2 sync -a ~/aws-utils '~/aws-utils'  # update all host files, not just those tracked by git
    ec2 sync -n ~/aws-utils '~/aws-utils'  # do not update anything, just print what will be updated
    ec2 sync -e="bash run_some_tests.sh" ~/aws-utils '~/aws-utils'  # run a command after sync
+   ec2 sync --client-always-right ~/aws-utils '~/aws-utils'  # Update with client files even if they are older
    ```
 
 4. **Forward ports** (Por favor)

@@ -21,7 +21,7 @@ _ec2_completions() {
     ;;&
 
   sync)
-    opts="-a --all-files -n --dry-run -e= --execute="
+    opts="-a --all-files -n --dry-run -e --execute= --client-always-right"
     file_mode=-d
     ;;&
 
