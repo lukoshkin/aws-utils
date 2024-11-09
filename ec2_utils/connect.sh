@@ -49,7 +49,7 @@ function connect() {
     local ec2_state
     ec2_state=$(
       aws ec2 describe-instances \
-        --instance-ids $instance_id \
+        --instance-ids "$instance_id" \
         --query 'Reservations[*].Instances[*].State.Name' \
         --output text
     )
@@ -57,9 +57,9 @@ function connect() {
       echo "The machine is currently in a transient state: $ec2_state"
       echo 'Re-run the command in a few seconds'
       echo 'Use the following command to check the status manually:'
-      echo 'aws ec2 describe-instances \\'
+      echo 'aws ec2 describe-instances \'
       echo "  --instance-ids $instance_id \\"
-      echo '  --query "Reservations[*].Instances[*].State.Name" \\'
+      echo '  --query "Reservations[*].Instances[*].State.Name" \'
       echo '  --output text'
       return 1
     fi

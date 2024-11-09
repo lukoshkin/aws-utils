@@ -107,6 +107,8 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 - `workdir` - the directory you get in after ssh login (scope: `ec2 connect`)
 - `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
 - `idle_on_first_login` - extra sleep time on the first login after resuming the machine
+- `sync_command` - the command to execute on the host each time after `sync`
+- `entrypoint` - the command to execute on the host on each login.
 - `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)  
    If not specified, defaults to `$src`
 

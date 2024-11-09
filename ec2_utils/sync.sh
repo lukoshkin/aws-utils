@@ -32,7 +32,7 @@ function sync_remote_with_client() {
   local sync_command all_files=false no_update=false dry_run=-v
   sync_command=$(login::get_cfg_entry sync_command)
   sync_command=${sync_command:-$(
-    login::get_cfg_entry sync_cmd "$HOME_LOGIN_CFG"
+    login::get_cfg_entry sync_command "$HOME_LOGIN_CFG"
   )}
 
   while [[ $1 != -- ]]; do

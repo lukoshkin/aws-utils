@@ -88,12 +88,14 @@ EC2_USER=${EC2_USER:-'ubuntu'}
 # -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint
 # -o IdentitiesOnly ─ ignore your '.ssh/config'
 declare -a AWS_SSH_OPTS=(
-  "-i"
+  '-i'
   "$AWS_SSH_KEY"
-  "-o"
-  "IdentitiesOnly=yes"
-  "-o"
-  "UserKnownHostsFile=/dev/null"
-  "-o"
-  "StrictHostKeychecking=no"
+  '-o'
+  'IdentitiesOnly=yes'
+  '-o'
+  'UserKnownHostsFile=/dev/null'
+  '-o'
+  'StrictHostKeyChecking=no'
+  '-o'
+  'LogLevel=Error'
 )

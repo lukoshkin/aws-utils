@@ -10,7 +10,9 @@ disconnect() {
     ssh "${AWS_SSH_OPTS[@]}" "$login_and_host" "sudo shutdown -h now"
     rm "$TMP_LOGIN_CFG"
   else
-    aws ec2 stop-instances --instance-ids "$(login::get_cfg_entry instance_id)"
+    aws ec2 stop-instances --instance-ids "$(
+      login::get_cfg_entry instance_id $HOME_LOGIN_CFG
+    )"
   fi
 }
 
