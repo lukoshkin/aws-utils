@@ -11,7 +11,7 @@ function help_msg() {
   echo
   echo "Options:"
   echo "  -h, --help                   Show this help message and exit"
-  echo "  -e, --execute                The command to execute after sync"
+  echo "  -e CMD, --execute CMD        The command to execute after sync"
   echo "  -a, --all-files              Ensure all files are synced"
   echo "  -n, --dry-run                Make trial run without making any changes"
   echo "  --client-always-right        Update with client files even if their modify-times are older"

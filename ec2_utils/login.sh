@@ -2,7 +2,6 @@
 
 HOME_LOGIN_CFG=${EC2_LOGIN_CFG_PATH:-~/.ec2_login_opts}
 TMP_LOGIN_CFG=/tmp/ec2_$USER-last_login_opts
-TMP_LOGIN_LOG=/tmp/ec2_$USER-last_login.log
 
 login::get_cfg_entry() {
   local key=$1
@@ -83,10 +82,7 @@ login::ec2_public_ip_from_instance_id() {
 AWS_SSH_KEY=$(login::get_cfg_entry sshkey "$HOME_LOGIN_CFG")
 EC2_USER=$(login::get_cfg_entry user "$HOME_LOGIN_CFG")
 EC2_USER=${EC2_USER:-'ubuntu'}
-# -i <...>.pem ─ login key pair (created during EC2 instance launch on AWS)
-# -o UserKnownHostsFile=/dev/null ─ do not pollute known_hosts with a varying IP
-# -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint
-# -o IdentitiesOnly ─ ignore your '.ssh/config'
+TMP_LOGIN_LOG=/tmp/ec2_${USER}-${EC2_USER}-last_login.log
 declare -a AWS_SSH_OPTS=(
   '-i'
   "$AWS_SSH_KEY"
@@ -99,3 +95,7 @@ declare -a AWS_SSH_OPTS=(
   '-o'
   'LogLevel=Error'
 )
+# -i <...>.pem ─ login key pair (created during EC2 instance launch on AWS)
+# -o UserKnownHostsFile=/dev/null ─ do not pollute known_hosts with a varying IP
+# -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint
+# -o IdentitiesOnly ─ ignore your '.ssh/config'

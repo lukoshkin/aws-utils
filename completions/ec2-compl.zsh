@@ -18,8 +18,15 @@ _ec2_completions() {
       ;;
     remaining)
       case "${line[1]}" in
+        connect)
+          _arguments \
+            '(-h --help)'{-h,--help}'[Show help message]' \
+            '(-d --detach)'{-d,--detach}'[Do not start interactive session]' \
+            '(-e --execute)'{-e+,--execute=}'[Execute command after connecting]::_nothing'
+          ;;
         scp-file)
           _arguments \
+            '(-h --help)'{-h,--help}'[Show help message]' \
             '(-t --tar)'{-t,--tar}'[Tar the folder being transferred]' \
             '(-z --gzip)'{-z,--gzip}'[Gzip the tarred folder]' \
             '1:Source directory:_files' \
@@ -27,6 +34,7 @@ _ec2_completions() {
           ;;
         sync)
           _arguments \
+            '(-h --help)'{-h,--help}'[Show help message]' \
             '(-a --all-files)'{-a,--all-files}'[Sync over all files on the client]' \
             '(-e --execute)'{-e+,--execute=}'[Execute command after sync]::_nothing' \
             '(-n --dry-run)'{-n,--dry-run}'[Show changes without applying them]' \

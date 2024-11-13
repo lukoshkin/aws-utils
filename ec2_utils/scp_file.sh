@@ -39,10 +39,7 @@ function get_stem() {
 function get_rm_cp_cmd() {
   local target
   target=$(get_stem "$1")
-  [[ -z $target ]] && {
-    echo "Invalid source file"
-    exit 1
-  }
+  [[ -z $target ]] && return 1
   echo "rm -rf /tmp/$target{,.tar.gz} && cp -r $1 /tmp/$target"
 }
 
@@ -99,7 +96,7 @@ function check_destination() {
   fi
 
   if eval "${_CHECKS["[[ ! -d $(dirname "$dst") ]]"]}"; then
-    echo "Destination folder does not exist: $display_dst"
+    echo "Destination folder for path '$display_dst' does not exist"
     echo "Please create it before proceeding"
     return 1
   fi
@@ -179,7 +176,10 @@ function scp_file() {
   local target tar_cmd rm_cp_cmd
   target=$(get_stem "$src")
   tar_cmd=$(get_tar_cmd "$target" $gz)
-  rm_cp_cmd=$(get_rm_cp_cmd "$src")
+  rm_cp_cmd=$(get_rm_cp_cmd "$src") || {
+    echo "Invalid source file"
+    return 1
+  }
   [[ -z ${UPLOAD+any} ]] && {
     check_destination "$dst" || return 1
     src="$LOGINSTR:/tmp/$target.tar${gz}"

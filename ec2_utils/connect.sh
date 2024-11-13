@@ -2,6 +2,16 @@
 
 source "$(dirname $0)/login.sh"
 
+function help_msg() {
+  echo "Usage: $0 [OPTIONS] [login_and_host]"
+  echo "Connect to the specified EC2 instance"
+  echo
+  echo "Options:"
+  echo "  -e CMD, --execute CMD    Execute the command on the remote machine"
+  echo "  -d, --detach             Run the command in the background"
+  echo "  -h, --help               Show this help message and exit"
+}
+
 function strip_quotes() {
   local str=$1
   str=${str//'"'/}
@@ -31,12 +41,47 @@ function process_login_str() {
 }
 
 function connect() {
+  local CUSTOM_ES=21
+  local long_opts="execute:,detach,help"
+  local short_opts="e:,d,h"
+  local params
+
+  params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
+    echo Aborting..
+    return $CUSTOM_ES
+  }
+  eval set -- "$params"
+
+  local exec_cmd detach=false
+  while [[ $1 != -- ]]; do
+    case $1 in
+    -h | --help)
+      help_msg
+      return
+      ;;
+    -d | --detach)
+      detach=true
+      shift
+      ;;
+    -e | --execute)
+      detach=true
+      exec_cmd="$2"
+      shift 2
+      ;;
+    *)
+      echo Impl.error
+      return 1
+      ;;
+    esac
+  done
+
+  shift
   if [[ ! -f $TMP_LOGIN_CFG && -f $HOME_LOGIN_CFG ]]; then
     cp "$HOME_LOGIN_CFG" "$TMP_LOGIN_CFG"
   fi
 
   local instance_id user_input="$1"
-  user_input=$(login::get_cfg_entry logstr)
+  user_input=${user_input:-$(login::get_cfg_entry logstr)}
   instance_id=$(login::get_cfg_entry instance_id "$HOME_LOGIN_CFG")
 
   if [[ -z $instance_id ]]; then
@@ -95,7 +140,7 @@ function connect() {
 
   if [[ -n $entrypoint && $entrypoint != ':' ]]; then
     timeout "${TIMEOUT:-20}" ssh "${AWS_SSH_OPTS[@]}" \
-      "$login_and_host" "$entrypoint &>$TMP_LOGIN_LOG" || {
+      "$login_and_host" "$entrypoint &>>$TMP_LOGIN_LOG" || {
       echo Was not able to start the project containers!
       echo -n "Check the network connection or that you typed"
       echo " in the correct 'login_and_host' string!"
@@ -105,10 +150,19 @@ function connect() {
   fi
   login::set_cfg_entry 'logstr' "$login_and_host"
   login::set_cfg_entry 'workdir' "$workdir"
-  ssh -tA "${AWS_SSH_OPTS[@]}" -o ServerAliveInterval=100 "$login_and_host" \
-    "cd $workdir &>>$TMP_LOGIN_LOG; exec \$SHELL"
-  # -t to set a working directory and run interactive session from it
-  # -A to forward your '.ssh' folder
+  if ! $detach; then
+    ssh -tA "${AWS_SSH_OPTS[@]}" -o ServerAliveInterval=100 "$login_and_host" \
+      "cd $workdir &>>$TMP_LOGIN_LOG; exec \$SHELL"
+    # -t to set a working directory and run interactive session from it
+    # -A to forward your '.ssh' folder
+    return
+  fi
+  echo "Detaching.."
+  if [[ -n $exec_cmd ]]; then
+    echo "Executing command: <$exec_cmd>"
+    ssh -A "${AWS_SSH_OPTS[@]}" "$login_and_host" \
+      "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $TMP_LOGIN_LOG"
+  fi
 }
 
 connect "$@"

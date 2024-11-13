@@ -1,3 +1,4 @@
+user: ubuntu
 workdir: '~/some/folder'
 instance_id: i-0a1b23c45678d9e0f
 sshkey: ~/.ssh/key.pem

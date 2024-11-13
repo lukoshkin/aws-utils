@@ -2,6 +2,9 @@
 
 Easy management of AWS EC2 instances
 
+_With the proper configuration, one can login, download/upload, forward ports,  
+and execute commands remotely with a minor adjustment_
+
 ## Prerequisites
 
 1. Install `aws` command line utility. Follow the guidelines [
@@ -22,6 +25,16 @@ Easy management of AWS EC2 instances
    ec2 connect 10.111.101.01  # using IP4 (caches also "login and host string" to '/tmp/ec2_$USER-last_login_opts')
    ec2 connect ubuntu@ec2-10-111-101-01.compute-1.amazonaws.com  # using "login and host string"
    ec2 connect  # using the cached value of "login and host string"
+
+   ec2 connect -d  # Connect but do not start an interactive session (useful to run other commands: scp-file, sync, ...)
+   ec2 connect -e "<cmd to execute>"  # Execute command without logging in
+   ec2 connect -e "$(cat <<EOF
+     <command_1>
+     ...
+     <command_N>
+   EOF
+   )"  # Multi-line command or several commands execution
+   ec2 connect -e "bash -s" < script.sh  # Execution from a script
    ```
 
    Note that `connect` can add the proper inbound rule for ssh-connections for
@@ -101,6 +114,7 @@ Easy management of AWS EC2 instances
 Improve your user experience with `~/.ec2_login_opts`.  
 Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 
+- `user` - user under which to login on the remote host
 - `instance_id` - static id of the EC2 instance  
    It allows to fetch IP4 address without explicitly specifying it in the command
 - `sshkey` - path to your key pair used for connecting to the machine
@@ -111,6 +125,36 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 - `entrypoint` - the command to execute on the host on each login.
 - `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)  
    If not specified, defaults to `$src`
+
+### Small nuances
+
+- **Cached login options reset**  
+  When modifying `~/.ec2_login_opts`, the cached values in `/tmp/ec2_$USER-last_login_opts`  
+  are no longer valid. One should manually remove the latter file before the next `ec2` command.
+
+- **Custom path to the configuration file**  
+  Modifying the configuration file path is possible with the environment variable `EC2_LOGIN_CFG_PATH`.  
+  Setting it in one of the following will work:
+  `~/.bashrc`, `~/.bash_profile`, `$ZDOTDIR/.zshrc`, `~/.zshenv`
+
+- **Login under a user other than default**  
+  To be able to login under another username, you need to copy (just once) the
+  `.ssh` directory of the default user (`ubuntu`) to the home directory of the
+  target user on the remote host.
+
+  ```bash
+  ec2 connect
+  adduser foreign
+  sudo cp -r ~/.ssh /home/foreign
+  sudo chown -R foreign:foreign /home/foreign/.ssh
+  ## Another approach is to use rsync
+
+  <Ctrl-d>
+
+  ## After adding "user: foreign" to your configuration file (~/.ec2_login_opts)
+  ec2 connect
+  ## Now you are logged in as "foreign"
+  ```
 
 ## Completions
 

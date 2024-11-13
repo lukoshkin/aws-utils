@@ -15,13 +15,17 @@ _ec2_completions() {
   ## Subcommand-specific completion
   local opts file_mode
   case "${COMP_WORDS[1]}" in
+  connect)
+    opts="-h --help -d --detach -e --execute="
+    mapfile -t COMPREPLY < <(compgen -W "$opts" -- "${COMP_WORDS[-1]}")
+    ;;
   scp-file)
-    opts="-t --tar -z --gzip"
+    opts="-h --help -t --tar -z --gzip"
     file_mode=-f
     ;;&
 
   sync)
-    opts="-a --all-files -n --dry-run -e --execute= --client-always-right"
+    opts="-h --help -a --all-files -n --dry-run -e --execute= --client-always-right"
     file_mode=-d
     ;;&
 
@@ -39,10 +43,6 @@ _ec2_completions() {
     fi
     mapfile -t COMPREPLY < <(compgen -f -- "${COMP_WORDS[-1]}")
     ;;&
-
-  *)
-    return
-    ;;
   esac
 }
 
