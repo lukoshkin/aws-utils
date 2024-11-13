@@ -33,6 +33,10 @@ function get_stem() {
   local target=$1
   target="${1%/}"
   target="${1##*/}"
+  [[ $target = '.' ]] || [[ $target = .. ]] && {
+    basename "$(realpath "$target")"
+    return
+  }
   echo "$target"
 }
 
@@ -123,11 +127,11 @@ function scp_file() {
       ;;
     -t | --tar)
       via_tar=any
-      shift 1
+      shift
       ;;
     -z | --gzip)
       gz=.gz
-      shift 1
+      shift
       ;;
 
     *)
@@ -137,7 +141,7 @@ function scp_file() {
     esac
   done
 
-  shift 1
+  shift
   local src=$1
   local dst=${2:-$(
     login::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
@@ -171,6 +175,11 @@ function scp_file() {
     echo "However, I can copy to /tmp folder!"
     return 1
   }
+  if [[ -z ${UPLOAD+any} && ($src = . || $src = ..) ]]; then
+    echo "Please specify ¡explicitly! the source folder on the host"
+    echo "Using '.' or '..' is not allowed, since it can lead to unexpected results"
+    return 1
+  fi
 
   ## Copying a folder
   local target tar_cmd rm_cp_cmd
