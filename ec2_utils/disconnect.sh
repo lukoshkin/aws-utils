@@ -8,12 +8,19 @@ disconnect() {
   if [[ -n $login_and_host ]]; then
     echo "Shutting down the instance on $login_and_host"
     ssh "${AWS_SSH_OPTS[@]}" "$login_and_host" "sudo shutdown -h now"
-    rm "$TMP_LOGIN_CFG"
   else
     aws ec2 stop-instances --instance-ids "$(
-      login::get_cfg_entry instance_id $HOME_LOGIN_CFG
+      login::get_cfg_entry instance_id "$HOME_LOGIN_CFG"
     )"
   fi
+  local revoke_rule_uri ip4 sg_id
+  revoke_rule_uri=$(login::get_cfg_entry revoke-rule-uri)
+  if [[ -n $revoke_rule_uri ]]; then
+    ip4=$(cut -d% -f1 <<<"$revoke_rule_uri")
+    sg_id=$(cut -d% -f2 <<<"$revoke_rule_uri")
+    login::revoke_ssh_inbound_rule "$sg_id" "$ip4"
+  fi
+  rm -f "$TMP_LOGIN_CFG"
 }
 
 disconnect

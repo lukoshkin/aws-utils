@@ -18,14 +18,13 @@ function help_msg() {
 }
 
 function sync_remote_with_client() {
-  local CUSTOM_ES=21
   local long_opts="execute:,all-files,client-always-right,dry-run,help"
   local short_opts="e:,a,n,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return $CUSTOM_ES
+    return "$CUSTOM_ES"
   }
   eval set -- "$params"
 

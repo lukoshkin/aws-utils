@@ -107,14 +107,13 @@ function check_destination() {
 }
 
 function scp_file() {
-  local CUSTOM_ES=21
   local long_opts="tar,gzip,help"
   local short_opts="t,z,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return $CUSTOM_ES
+    return "$CUSTOM_ES"
   }
   eval set -- "$params"
 

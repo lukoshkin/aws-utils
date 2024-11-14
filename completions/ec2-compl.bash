@@ -16,7 +16,7 @@ _ec2_completions() {
   local opts file_mode
   case "${COMP_WORDS[1]}" in
   connect)
-    opts="-h --help -d --detach -e --execute="
+    opts="-h --help -d --detach -e --execute= -t --revoke-time= --ip="
     mapfile -t COMPREPLY < <(compgen -W "$opts" -- "${COMP_WORDS[-1]}")
     ;;
   scp-file)

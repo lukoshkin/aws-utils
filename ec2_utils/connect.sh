@@ -1,15 +1,19 @@
 #!/bin/bash
 
-source "$(dirname $0)/login.sh"
+source "$(dirname "$0")/login.sh"
 
 function help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
   echo "Connect to the specified EC2 instance"
   echo
   echo "Options:"
+  echo "  -h, --help               Show this help message and exit"
   echo "  -e CMD, --execute CMD    Execute the command on the remote machine"
   echo "  -d, --detach             Run the command in the background"
-  echo "  -h, --help               Show this help message and exit"
+  echo
+  echo '  [beta]'
+  echo "  --ip IP                        Manually specify the IP for the SSH inbound rule to add"
+  echo "  -t TIME, --revoke-time TIME    Specify the time in seconds to revoke the added SSH inbound rule"
 }
 
 function strip_quotes() {
@@ -41,18 +45,18 @@ function process_login_str() {
 }
 
 function connect() {
-  local CUSTOM_ES=21
-  local long_opts="execute:,detach,help"
-  local short_opts="e:,d,h"
+  local long_opts="execute:,detach,ip:,revoke-time:,help"
+  local short_opts="e:,d,t:,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return $CUSTOM_ES
+    return "$CUSTOM_ES"
   }
   eval set -- "$params"
 
-  local exec_cmd detach=false
+  declare -a add_ip4_to_sg_opts
+  local exec_cmd detach=false clear_logstr=false
   while [[ $1 != -- ]]; do
     case $1 in
     -h | --help)
@@ -60,12 +64,18 @@ function connect() {
       return
       ;;
     -d | --detach)
+      clear_logstr=true
       detach=true
       shift
       ;;
     -e | --execute)
       detach=true
       exec_cmd="$2"
+      shift 2
+      ;;
+    -t | --ip | --revoke-time)
+      clear_logstr=true
+      add_ip4_to_sg_opts+=("$1" "$2")
       shift 2
       ;;
     *)
@@ -78,6 +88,10 @@ function connect() {
   shift
   if [[ ! -f $TMP_LOGIN_CFG && -f $HOME_LOGIN_CFG ]]; then
     cp "$HOME_LOGIN_CFG" "$TMP_LOGIN_CFG"
+  fi
+
+  if $clear_logstr; then
+    login::set_cfg_entry 'logstr'
   fi
 
   local instance_id user_input="$1"
@@ -110,22 +124,25 @@ function connect() {
     fi
     if [[ $ec2_state = stopped ]]; then
       login::start_ec2_instances "$instance_id"
-      login::add_ip4_to_sg "$instance_id"
+      login::add_ip4_to_sg "$instance_id" "${add_ip4_to_sg_opts[@]}"
       echo "Idle until the instance is in 'pending' state.."
       aws ec2 wait instance-running --instance-ids "$instance_id"
 
       local sleep_time
       sleep_time=$(login::get_cfg_entry idle_on_first_login)
-      sleep_time=${sleep_time:-5}
+      sleep_time=${sleep_time:-6}
       echo -n "Idle for another ${sleep_time} seconds"
       echo " for all actions to take effect.."
       sleep "$sleep_time"
+    elif [[ ${#add_ip4_to_sg_opts[@]} -gt 0 ]]; then
+      echo "Managing the security group inbound rules with ${add_ip4_to_sg_opts[*]}"
+      login::add_ip4_to_sg "$instance_id" "${add_ip4_to_sg_opts[@]}"
     fi
     user_input=$(login::ec2_public_ip_from_instance_id "$instance_id")
   fi
 
   local login_and_host workdir
-  login_and_host="$(process_login_str $user_input)" || return 1
+  login_and_host="$(process_login_str "$user_input")" || return 1
   entrypoint=$(login::get_cfg_entry entrypoint)
   entrypoint=${entrypoint:-':'}
   entrypoint=$(strip_quotes "$entrypoint")
@@ -157,12 +174,12 @@ function connect() {
     # -A to forward your '.ssh' folder
     return
   fi
-  echo "Detaching.."
   if [[ -n $exec_cmd ]]; then
     echo "Executing command: <$exec_cmd>"
     ssh -A "${AWS_SSH_OPTS[@]}" "$login_and_host" \
       "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $TMP_LOGIN_LOG"
   fi
+  echo -e "\nDetaching.."
 }
 
 connect "$@"

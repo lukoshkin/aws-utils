@@ -25,16 +25,6 @@ and execute commands remotely with a minor adjustment_
    ec2 connect 10.111.101.01  # using IP4 (caches also "login and host string" to '/tmp/ec2_$USER-last_login_opts')
    ec2 connect ubuntu@ec2-10-111-101-01.compute-1.amazonaws.com  # using "login and host string"
    ec2 connect  # using the cached value of "login and host string"
-
-   ec2 connect -d  # Connect but do not start an interactive session (useful to run other commands: scp-file, sync, ...)
-   ec2 connect -e "<cmd to execute>"  # Execute command without logging in
-   ec2 connect -e "$(cat <<EOF
-     <command_1>
-     ...
-     <command_N>
-   EOF
-   )"  # Multi-line command or several commands execution
-   ec2 connect -e "bash -s" < script.sh  # Execution from a script
    ```
 
    Note that `connect` can add the proper inbound rule for ssh-connections for
@@ -74,7 +64,25 @@ and execute commands remotely with a minor adjustment_
    PORT=8080 ec2 porfowar
    ```
 
-5. **Shutdown from the client**  
+5. **Advanced settings for login and enhanced `connect` functionality**
+
+   ```bash
+   ec2 connect -d  # Connect but do not start an interactive session (useful to run other commands: scp-file, sync, ...)
+   ec2 connect -e "<cmd to execute>"  # Execute command without logging in
+   ec2 connect -e "$(cat <<EOF
+     <command_1>
+     ...
+     <command_N>
+   EOF
+   )"  # Multi-line command or several commands execution
+   ec2 connect -e "bash -s" < script.sh  # Execution from a script
+
+   ec2 connect -d  # When used after a successful `connect`, clears the login and host string
+   ec2 connect -d --ip 0.0.0.0/0 --revoke-time 300  # Establish the connection with SSH inbound rule set for any IP for 5 minutes
+   ## After 5 minutes, the '0.0.0.0/0' SSH inbound rule will be revoked.
+   ```
+
+6. **Shutdown from the client**  
    Clears `$TMP_LOGIN_OPTS` and shuts down the instance.  
    If `$TMP_LOGIN_OPTS` does not exist, will use `instance_id` from `$HOME_LOGIN_OPTS`
 

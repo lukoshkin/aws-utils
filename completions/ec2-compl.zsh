@@ -22,7 +22,9 @@ _ec2_completions() {
           _arguments \
             '(-h --help)'{-h,--help}'[Show help message]' \
             '(-d --detach)'{-d,--detach}'[Do not start interactive session]' \
-            '(-e --execute)'{-e+,--execute=}'[Execute command after connecting]::_nothing'
+            '(-e --execute)'{-e+,--execute=}'[Execute command after connecting]::_nothing' \
+            '(--ip)--ip=[Manually specify the IP for the SSH inbound rule to add]' \
+            '(-t --revoke-time)'{-t+,--revoke-time=}'[Revoke the added SSH inbound rule after the provided time in seconds]::_nothing'
           ;;
         scp-file)
           _arguments \
