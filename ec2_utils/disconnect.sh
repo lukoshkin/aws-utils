@@ -6,8 +6,10 @@ disconnect() {
   local login_and_host
   login_and_host=$(login::get_cfg_entry logstr)
   if [[ -n $login_and_host ]]; then
+    declare -a aws_ssh_opts
     echo "Shutting down the instance on $login_and_host"
-    ssh "${AWS_SSH_OPTS[@]}" "$login_and_host" "sudo shutdown -h now"
+    aws_ssh_opts=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+    ssh "${aws_ssh_opts[@]}" "$login_and_host" "sudo shutdown -h now"
   else
     aws ec2 stop-instances --instance-ids "$(
       login::get_cfg_entry instance_id "$HOME_LOGIN_CFG"

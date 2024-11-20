@@ -84,16 +84,20 @@ function sync_remote_with_client() {
     "${LOGINSTR}:$dst"
   )
   $no_update && unset 'rest_opts_and_args[2]'
+
+  declare -a aws_ssh_opts
+  aws_ssh_opts=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+
   ## Since we run without `eval`, `dry_run` can't be empty.
   ## Or will be treated as an empty argument otherwise
   if [[ -d $src/.git ]] && ! $all_files; then
     rsync "$dry_run" \
-      -e "ssh ${AWS_SSH_OPTS[*]}" \
+      -e "ssh ${aws_ssh_opts[*]}" \
       --files-from=<(git -C "$src" ls-files) \
       "${rest_opts_and_args[@]}"
   else
     rsync "$dry_run" \
-      -e "ssh ${AWS_SSH_OPTS[*]}" \
+      -e "ssh ${aws_ssh_opts[*]}" \
       "${rest_opts_and_args[@]}"
   fi
 
@@ -103,7 +107,7 @@ function sync_remote_with_client() {
       echo "<$sync_command>"
       return
     fi
-    ssh "${AWS_SSH_OPTS[@]}" "$LOGINSTR" "cd $dst && $sync_command"
+    ssh "${aws_ssh_opts[@]}" "$LOGINSTR" "cd $dst && $sync_command"
   fi
 }
 

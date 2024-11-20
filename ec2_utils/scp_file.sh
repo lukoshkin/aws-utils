@@ -67,7 +67,7 @@ function compose_checks() {
         status="${BASH_REMATCH[2]}"
         _CHECKS["$check"]="(( ! $status ))"
       fi
-    done <<<"$(ssh "${AWS_SSH_OPTS[@]}" "$LOGINSTR" "$cmd")"
+    done <<<"$(ssh "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$cmd")"
   else
     for check in "$@"; do
       _CHECKS["$check"]="$check"
@@ -152,6 +152,8 @@ function scp_file() {
     return 1
   }
   login::maybe_set_login_string
+  declare -a _AWS_SSH_OPTS
+  _AWS_SSH_OPTS=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Copying a single file
   [[ -z $via_tar ]] && {
@@ -165,7 +167,7 @@ function scp_file() {
       check_destination "$dst" host || return 1
       dst="$LOGINSTR:$dst"
     }
-    scp "${AWS_SSH_OPTS[@]}" "$src" "$dst"
+    scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
     return
   }
 
@@ -191,14 +193,14 @@ function scp_file() {
   [[ -z ${UPLOAD+any} ]] && {
     check_destination "$dst" || return 1
     src="$LOGINSTR:/tmp/$target.tar${gz}"
-    ssh "${AWS_SSH_OPTS[@]}" "$LOGINSTR" "$rm_cp_cmd && cd /tmp && $tar_cmd"
+    ssh "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$rm_cp_cmd && cd /tmp && $tar_cmd"
   } || {
     check_destination "$dst" host || return 1
     eval "$rm_cp_cmd && cd /tmp && $tar_cmd"
     src="/tmp/$target.tar${gz}"
     dst="$LOGINSTR:$dst"
   }
-  scp "${AWS_SSH_OPTS[@]}" "$src" "$dst"
+  scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
 }
 
 scp_file "$@"

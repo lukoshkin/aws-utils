@@ -9,11 +9,13 @@ function help_msg() {
   echo "Options:"
   echo "  -h, --help               Show this help message and exit"
   echo "  -e CMD, --execute CMD    Execute the command on the remote machine"
-  echo "  -d, --detach             Run the command in the background"
+  echo "  -d, --detach             Do not log in on the host"
   echo
   echo '  [beta]'
-  echo "  --ip IP                        Manually specify the IP for the SSH inbound rule to add"
-  echo "  -t TIME, --revoke-time TIME    Specify the time in seconds to revoke the added SSH inbound rule"
+  echo "  --ip IP                             Manually specify the IP for the SSH inbound rule to add"
+  echo "  -t TIME, --revoke-time TIME         Specify the time in seconds to revoke the added SSH inbound rule"
+  echo "  -p=[NUM], --pick-instance=[NUM]     Pick the instance to connect to"
+  echo "  -n, --non-interactive               A security group auto-select (may be extended later)"
 }
 
 function strip_quotes() {
@@ -44,9 +46,43 @@ function process_login_str() {
   echo "$check_in_str"
 }
 
+function select_instance() {
+  local choice=$1
+  local instance_id
+  declare -A instance_ids
+  while IFS='=' read -r instance pem_file; do
+    instance_ids["$instance"]="$pem_file"
+  done <<<"$(login::get_cfg_entry instance_ids "$HOME_LOGIN_CFG")"
+  [[ -z ${instance_ids[*]} ]] && {
+    echo "No instances found in the global config file ($HOME_LOGIN_CFG)"
+    return 1
+  }
+  [[ -n $choice && $choice != = ]] && {
+    choice=${choice#=}
+    local _choice=$choice
+    [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
+    instance_id=${!instance_ids[$_choice]}
+    [[ -z $instance_id ]] && {
+      echo "No instance found with the id '$choice'"
+      echo "Available instances:"
+      local num=1
+      for instance in "${!instance_ids[@]}"; do
+        echo "$num) $instance"
+        ((num++))
+      done
+      return 1
+    }
+    login::set_cfg_entry instance_id "$instance_id"
+    return 0
+  }
+  instance_id=$(login::select_option "${!instance_ids[@]}") || return 1
+  login::set_cfg_entry instance_id "$instance_id"
+  login::set_cfg_entry sshkey "${instance_ids[$instance_id]}"
+}
+
 function connect() {
-  local long_opts="execute:,detach,ip:,revoke-time:,help"
-  local short_opts="e:,d,t:,h"
+  local long_opts="non-interactive,pick-instance:,execute:,detach,ip:,revoke-time:,help"
+  local short_opts="n,p:,e:,d,t:,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -63,8 +99,15 @@ function connect() {
       help_msg
       return
       ;;
-    -d | --detach)
+    -p | --pick-instance | -d | --detach | -t | --ip | --revoke-time)
       clear_logstr=true
+      ;;&
+    -p | --pick-instance)
+      echo "Select the instance to connect to:"
+      select_instance "$2" || return 1
+      shift 2
+      ;;
+    -d | --detach)
       detach=true
       shift
       ;;
@@ -74,9 +117,12 @@ function connect() {
       shift 2
       ;;
     -t | --ip | --revoke-time)
-      clear_logstr=true
       add_ip4_to_sg_opts+=("$1" "$2")
       shift 2
+      ;;
+    -n | --non-interactive)
+      add_ip4_to_sg_opts+=("$1")
+      shift
       ;;
     *)
       echo Impl.error
@@ -96,12 +142,12 @@ function connect() {
 
   local instance_id user_input="$1"
   user_input=${user_input:-$(login::get_cfg_entry logstr)}
-  instance_id=$(login::get_cfg_entry instance_id "$HOME_LOGIN_CFG")
+  instance_id=$(login::get_cfg_entry instance_id)
 
   if [[ -z $instance_id ]]; then
     echo -e "\033[0;35m"
     echo "Check the id of the EC2 instance you are connecting to and add it"
-    echo "under 'instance_id' key to the global config file ($HOME_LOGIN_CFG)"
+    echo "under 'instance_ids' key to the global config file ($HOME_LOGIN_CFG)"
     echo "to automatically add dynamic IP to the security group inbound rules"
     echo -e "\033[0m"
   elif [[ -z $user_input ]]; then
@@ -155,8 +201,11 @@ function connect() {
   echo "Entrypoint cmd: '$entrypoint'"
   echo '---'
 
+  declare -a aws_ssh_opts
+  aws_ssh_opts=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+
   if [[ -n $entrypoint && $entrypoint != ':' ]]; then
-    timeout "${TIMEOUT:-20}" ssh "${AWS_SSH_OPTS[@]}" \
+    timeout "${TIMEOUT:-20}" ssh "${aws_ssh_opts[@]}" \
       "$login_and_host" "$entrypoint &>>$TMP_LOGIN_LOG" || {
       echo Was not able to start the project containers!
       echo -n "Check the network connection or that you typed"
@@ -168,7 +217,7 @@ function connect() {
   login::set_cfg_entry 'logstr' "$login_and_host"
   login::set_cfg_entry 'workdir' "$workdir"
   if ! $detach; then
-    ssh -tA "${AWS_SSH_OPTS[@]}" -o ServerAliveInterval=100 "$login_and_host" \
+    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$login_and_host" \
       "cd $workdir &>>$TMP_LOGIN_LOG; exec \$SHELL"
     # -t to set a working directory and run interactive session from it
     # -A to forward your '.ssh' folder
@@ -176,7 +225,7 @@ function connect() {
   fi
   if [[ -n $exec_cmd ]]; then
     echo "Executing command: <$exec_cmd>"
-    ssh -A "${AWS_SSH_OPTS[@]}" "$login_and_host" \
+    ssh -A "${aws_ssh_opts[@]}" "$login_and_host" \
       "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $TMP_LOGIN_LOG"
   fi
   echo -e "\nDetaching.."

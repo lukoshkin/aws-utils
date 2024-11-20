@@ -7,6 +7,10 @@ TMP_LOGIN_CFG=/tmp/ec2_$USER-last_login_opts
 login::get_cfg_entry() {
   local key=$1
   [[ -f ${2:-$TMP_LOGIN_CFG} ]] || return
+  grep -q "^$key:-" "${2:-$TMP_LOGIN_CFG}" && {
+    sed -n "/^$key:-/,/^$/p" "${2:-$TMP_LOGIN_CFG}" | sed -n '1!p'
+    return
+  }
   sed -r "s;$key: (.*);\1;" <<<"$(grep "^$key:" "${2:-$TMP_LOGIN_CFG}")"
 }
 
@@ -25,13 +29,10 @@ login::set_cfg_entry() {
   fi
 }
 
-AWS_SSH_KEY=$(login::get_cfg_entry sshkey "$HOME_LOGIN_CFG")
 EC2_USER=$(login::get_cfg_entry user "$HOME_LOGIN_CFG")
 EC2_USER=${EC2_USER:-'ubuntu'}
 TMP_LOGIN_LOG=/tmp/ec2_${USER}-${EC2_USER}-last_login.log
 declare -a AWS_SSH_OPTS=(
-  '-i'
-  "$AWS_SSH_KEY"
   '-o'
   'IdentitiesOnly=yes'
   '-o'
@@ -45,6 +46,17 @@ declare -a AWS_SSH_OPTS=(
 # -o UserKnownHostsFile=/dev/null ─ do not pollute known_hosts with a varying IP
 # -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint
 # -o IdentitiesOnly ─ ignore your '.ssh/config'
+
+login::select_option() {
+  select option in "$@"; do
+    [[ -z $option ]] && {
+      echo "No option selected"
+      return 1
+    }
+    echo "$option"
+    break
+  done
+}
 
 login::maybe_set_login_string() {
   msg="Using ${LOGINSTR:=$(login::get_cfg_entry logstr)} as login string"
@@ -82,8 +94,8 @@ login::revoke_ssh_inbound_rule() {
 }
 
 login::add_ip4_to_sg() {
-  local short_opts="t:"
-  local long_opts="revoke-time:,ip:"
+  local short_opts="n,t:"
+  local long_opts="non-interactive,revoke-time:,ip:"
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
@@ -91,10 +103,14 @@ login::add_ip4_to_sg() {
   }
   eval set -- "$params"
 
-  local ip4 revoke_time=-1
+  local non_interactive ip4 revoke_time=-1
   ip4="$(curl -s ifconfig.me)/32"
   while [[ $1 != -- ]]; do
     case $1 in
+    -n | --non-interactive)
+      non_interactive=true
+      shift
+      ;;
     --ip)
       ip4=$2
       shift 2
@@ -113,13 +129,21 @@ login::add_ip4_to_sg() {
   shift
   valid_instance_id_check "$1" || return 1
 
-  local sg_id instance_id=$1
-  sg_id=$(
+  local instance_id=$1
+  declare -a sg_ids
+  mapfile -t sg_ids < <(
     aws ec2 describe-instances \
       --instance-ids "$instance_id" \
       --query 'Reservations[*].Instances[*].SecurityGroups[*].GroupId' \
-      --output text
+      --output text | tr -s ' \t' '\n'
   )
+  local sg_id
+  if [[ ${#sg_ids[@]} -eq 1 || $non_interactive ]]; then
+    sg_id=${sg_ids[0]}
+  else
+    echo "Select the security group to add the SSH inbound rule to:"
+    sg_id=$(login::select_option "${sg_ids[@]}") || return 1
+  fi
   login::set_cfg_entry revoke-rule-uri "$ip4%$sg_id"
   if [[ $revoke_time -gt 0 ]]; then
     echo "Revoking the ssh access for '$ip4' in $revoke_time seconds"
