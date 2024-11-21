@@ -16,6 +16,7 @@ disconnect() {
     )"
   fi
   local revoke_rule_uri ip4 sg_id
+  # TODO: revoke-rule-uri per instance
   revoke_rule_uri=$(login::get_cfg_entry revoke-rule-uri)
   if [[ -n $revoke_rule_uri ]]; then
     ip4=$(cut -d% -f1 <<<"$revoke_rule_uri")

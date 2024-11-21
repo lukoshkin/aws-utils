@@ -48,36 +48,57 @@ function process_login_str() {
 
 function select_instance() {
   local choice=$1
-  local instance_id
-  declare -A instance_ids
-  while IFS='=' read -r instance pem_file; do
-    instance_ids["$instance"]="$pem_file"
-  done <<<"$(login::get_cfg_entry instance_ids "$HOME_LOGIN_CFG")"
-  [[ -z ${instance_ids[*]} ]] && {
-    echo "No instances found in the global config file ($HOME_LOGIN_CFG)"
+  ## TODO: if `choice` is given, no need to call `aws`,
+  ## and thus the command can be done much quicker.
+  local instance
+  local raw_instance_ids
+  raw_instance_ids=$(login::get_cfg_entry instance_ids "$HOME_LOGIN_CFG")
+  [[ -z ${raw_instance_ids[*]} ]] && {
+    echo "No instances to select from"
+    echo "Check your 'instance_ids:-' key in $HOME_LOGIN_CFG"
     return 1
   }
+  declare -A instance_ids
+  declare -A ssh_keys
+  while IFS='=' read -r iid pem_file; do
+    [[ -z $pem_file ]] && continue
+    local iname
+    iname=$(
+      aws ec2 describe-instances \
+        --instance-ids "$iid" \
+        --query "Reservations[].Instances[].Tags[?Key=='Name'].Value" \
+        --output text
+    )
+    ssh_keys["$iname"]="$pem_file"
+    instance_ids["$iname"]="$iid"
+  done <<<"$raw_instance_ids"
   [[ -n $choice && $choice != = ]] && {
     choice=${choice#=}
     local _choice=$choice
     [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
-    instance_id=${!instance_ids[$_choice]}
-    [[ -z $instance_id ]] && {
-      echo "No instance found with the id '$choice'"
+    declare -a tmp=("${!instance_ids[@]}")
+    instance=${tmp[$_choice]}
+    [[ -z $instance ]] && {
+      echo "No option found with the #'$choice'"
       echo "Available instances:"
       local num=1
-      for instance in "${!instance_ids[@]}"; do
-        echo "$num) $instance"
+      for iid in "${!instance_ids[@]}"; do
+        echo "$num) $iid"
         ((num++))
       done
       return 1
     }
-    login::set_cfg_entry instance_id "$instance_id"
+    login::set_cfg_entry instance_id "${instance_ids[$instance]}"
+    login::set_cfg_entry sshkey "${ssh_keys[$instance]}"
     return 0
   }
-  instance_id=$(login::select_option "${!instance_ids[@]}") || return 1
-  login::set_cfg_entry instance_id "$instance_id"
-  login::set_cfg_entry sshkey "${instance_ids[$instance_id]}"
+  echo "Select the instance to connect to:"
+  instance=$(login::select_option "${!instance_ids[@]}") || {
+    echo "Invalid selection"
+    return 1
+  }
+  login::set_cfg_entry instance_id "${instance_ids[$instance]}"
+  login::set_cfg_entry sshkey "${ssh_keys[$instance]}"
 }
 
 function connect() {
@@ -91,6 +112,13 @@ function connect() {
   }
   eval set -- "$params"
 
+  ## Why to copy here? We need to check if TMP_LOGIN_CFG exists before
+  ## any calls of login::set_cfg_entry. Otherwise, the file will be created
+  ## and we won't initialize it with a good seed.
+  if [[ ! -f $TMP_LOGIN_CFG && -f $HOME_LOGIN_CFG ]]; then
+    cp "$HOME_LOGIN_CFG" "$TMP_LOGIN_CFG"
+  fi
+
   declare -a add_ip4_to_sg_opts
   local exec_cmd detach=false clear_logstr=false
   while [[ $1 != -- ]]; do
@@ -103,7 +131,6 @@ function connect() {
       clear_logstr=true
       ;;&
     -p | --pick-instance)
-      echo "Select the instance to connect to:"
       select_instance "$2" || return 1
       shift 2
       ;;
@@ -132,9 +159,6 @@ function connect() {
   done
 
   shift
-  if [[ ! -f $TMP_LOGIN_CFG && -f $HOME_LOGIN_CFG ]]; then
-    cp "$HOME_LOGIN_CFG" "$TMP_LOGIN_CFG"
-  fi
 
   if $clear_logstr; then
     login::set_cfg_entry 'logstr'
@@ -159,7 +183,7 @@ function connect() {
         --output text
     )
     if ! [[ $ec2_state =~ (stopped|running) ]]; then
-      echo "The machine is currently in a transient state: $ec2_state"
+      echo "The machine is currently in a transient state: '$ec2_state'"
       echo 'Re-run the command in a few seconds'
       echo 'Use the following command to check the status manually:'
       echo 'aws ec2 describe-instances \'

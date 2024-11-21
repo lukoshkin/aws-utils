@@ -50,7 +50,6 @@ declare -a AWS_SSH_OPTS=(
 login::select_option() {
   select option in "$@"; do
     [[ -z $option ]] && {
-      echo "No option selected"
       return 1
     }
     echo "$option"
