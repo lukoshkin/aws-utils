@@ -24,6 +24,12 @@ ec2() {
   porfowar)
     bash "$_PARENT_DIR"/porforwar.sh "$@"
     ;;
+  pick)
+    bash "$_PARENT_DIR"/pick.sh "$@"
+    ;;
+  clean-up)
+    bash "$_PARENT_DIR"/clean-up.sh "$@"
+    ;;
   install-completions)
     [[ $# -gt 1 ]] && {
       echo "Usage: ec2 install-completions [install_path]"
@@ -59,7 +65,7 @@ ec2() {
     fi
     ;;
   *)
-    echo "Usage: ec2 {connect|scp-file|porfowar|disconnect|install-completions} [args]"
+    echo "Usage: ec2 {connect|pick|scp-file|porfowar|clean-up|disconnect|install-completions} [args]"
     echo "More about the usage here: https://github.com/lukoshkin/aws-utils/tree/master"
     ;;
   esac

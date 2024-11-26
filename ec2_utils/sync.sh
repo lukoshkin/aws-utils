@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source "$(dirname $0)/login.sh"
+source "$(dirname $0)/aws-login.sh"
 
 function help_msg() {
   printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
@@ -29,9 +29,9 @@ function sync_remote_with_client() {
   eval set -- "$params"
 
   local sync_command all_files=false no_update=false dry_run=-v
-  sync_command=$(login::get_cfg_entry sync_command)
+  sync_command=$(utils::get_cfg_entry sync_command)
   sync_command=${sync_command:-$(
-    login::get_cfg_entry sync_command "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry sync_command "$HOME_LOGIN_CFG"
   )}
 
   while [[ $1 != -- ]]; do
@@ -75,7 +75,7 @@ function sync_remote_with_client() {
     return 1
   }
 
-  login::maybe_set_login_string
+  utils::maybe_set_login_string
   declare -a rest_opts_and_args=(
     -az
     --progress
@@ -86,7 +86,7 @@ function sync_remote_with_client() {
   $no_update && unset 'rest_opts_and_args[2]'
 
   declare -a aws_ssh_opts
-  aws_ssh_opts=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+  aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Since we run without `eval`, `dry_run` can't be empty.
   ## Or will be treated as an empty argument otherwise

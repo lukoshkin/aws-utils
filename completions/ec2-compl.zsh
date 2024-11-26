@@ -2,9 +2,11 @@ _ec2_completions() {
   local -a subcommands
   subcommands=(
     'connect:Connect to an EC2 instance'
+    'pick:Select an instance to continue with'
     'scp-file:Transfer files to or from an EC2 instance'
     'sync:Sync the host folder on an EC2 instance with the local counterpart'
     'porfowar:Port forward from an EC2 instance'
+    'clean-up:Clear SSH inbound rules added earlier by ec2'
     'disconnect:Disconnect from the EC2 instance'
     'install-completions:Install completions for the ec2 command'
   )
@@ -21,6 +23,7 @@ _ec2_completions() {
         connect)
           _arguments \
             '(-h --help)'{-h,--help}'[Show help message]' \
+            '(-p --pick-instance)'{-p+,--pick-instance=}'[Pick the instance to connect to]' \
             '(-d --detach)'{-d,--detach}'[Do not start interactive session]' \
             '(-e --execute)'{-e+,--execute=}'[Execute command after connecting]::_nothing' \
             '(--ip)--ip=[Manually specify the IP for the SSH inbound rule to add]' \

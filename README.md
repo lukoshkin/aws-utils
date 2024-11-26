@@ -77,7 +77,6 @@ and execute commands remotely with a minor adjustment_
    )"  # Multi-line command or several commands execution
    ec2 connect -e "bash -s" < script.sh  # Execution from a script
 
-   ec2 connect -d  # When used after a successful `connect`, clears the login and host string
    ec2 connect -d --ip 0.0.0.0/0 --revoke-time 300  # Establish the connection with SSH inbound rule set for any IP for 5 minutes
    ## After 5 minutes, the '0.0.0.0/0' SSH inbound rule will be revoked.
    ```
@@ -188,5 +187,7 @@ ec2 install-completions shellrc_file
        (unlike `sudo shutdown -h now` on the host, it should also manage  
        clearing the cached values in `/tmp/ec2_$USER-last_login_opts`)
 - [x] Add bash/zsh completions for ec2
-- [ ] Manage more than one EC2 instance
+- [x] Manage more than one EC2 instance
+- [ ] Rewrite to use a separate tmp config for each instance
+- [ ] Update README after finishing multi-instance management feature
 - [ ] Rename/move/migrate to "aws-cli-utils"?

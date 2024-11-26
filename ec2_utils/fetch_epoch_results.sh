@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source "$(dirname "$0")/login.sh"
+source "$(dirname "$0")/aws-login.sh"
 
 function fetch_images() {
   local fid=$1
