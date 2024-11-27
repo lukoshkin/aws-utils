@@ -144,7 +144,7 @@ login::maybe_add_ip4_to_sg() {
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 1
   }
   eval set -- "$params"
 

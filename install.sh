@@ -4,10 +4,7 @@ link_ec2() {
   sudo ln -sf "$(readlink -f ec2.sh)" /usr/local/bin/ec2
 }
 
-[[ -f ec2.sh ]] && {
-  INSTALL_PATH=$PWD
-}
-
+[[ -f ec2.sh ]] && INSTALL_PATH=$PWD
 _DEFAULT_INSTALL_PATH=${XDG_CONFIG_HOME:-$HOME/.config}/aws-utils
 echo "Using ${INSTALL_PATH:=${_DEFAULT_INSTALL_PATH}} as install path"
 

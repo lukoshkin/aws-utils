@@ -87,7 +87,7 @@ function check_destination() {
   if eval "${_CHECKS["[[ -f $dst ]]"]}"; then
     eval "${_CHECKS["[[ $dst = /tmp/* ]]"]}" && {
       local overwrite
-      overwrite=$(login::get_cfg_entry overwrite_in_tmp "$HOME_LOGIN_CFG")
+      overwrite=$(utils::get_cfg_entry overwrite_in_tmp "$HOME_LOGIN_CFG")
       if [[ $overwrite = true ]]; then
         echo "Overwriting destination file: $display_dst"
         echo "There might be problems because of the existing file permissions"
@@ -113,7 +113,7 @@ function scp_file() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 1
   }
   eval set -- "$params"
 
@@ -143,7 +143,7 @@ function scp_file() {
   shift
   local src=$1
   local dst=${2:-$(
-    login::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
   )}
   local dst=${dst:-$src}
   [[ -z $src ]] && {
@@ -151,9 +151,9 @@ function scp_file() {
     help_msg
     return 1
   }
-  login::maybe_set_login_string
+  utils::maybe_set_login_string
   declare -a _AWS_SSH_OPTS
-  _AWS_SSH_OPTS=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+  _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Copying a single file
   [[ -z $via_tar ]] && {

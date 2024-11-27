@@ -26,7 +26,7 @@ function connect() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 1
   }
   eval set -- "$params"
 

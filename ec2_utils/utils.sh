@@ -1,8 +1,6 @@
 #!/bin/bash
 
-CUSTOM_ES=21 # custom exit status
 HOME_LOGIN_CFG=${EC2_LOGIN_CFG_PATH:-~/.ec2_login_opts}
-## TODO: create a tmp config per each instance
 TMP_LOGIN_CFG=/tmp/ec2_$USER-last_login_opts
 
 utils::get_cfg_entry() {

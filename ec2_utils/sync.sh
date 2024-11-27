@@ -24,7 +24,7 @@ function sync_remote_with_client() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 1
   }
   eval set -- "$params"
 
