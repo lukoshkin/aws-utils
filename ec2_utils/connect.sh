@@ -93,7 +93,9 @@ function connect() {
   workdir=${WORKDIR:-$(utils::get_cfg_entry workdir)}
   workdir=$(utils::strip_quotes "${workdir:-'~'}")
 
+  echo '---'
   echo "Connecting to <$_LOGINSTR>"
+  echo "Your instance's name: "
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
   echo '---'

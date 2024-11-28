@@ -126,6 +126,7 @@ utils::strip_quotes() {
 utils::select_option() {
   select option in "$@"; do
     [[ -z $option ]] && {
+      >&2 echo "Invalid selection"
       return 1
     }
     echo "$option"

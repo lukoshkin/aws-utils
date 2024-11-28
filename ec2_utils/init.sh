@@ -59,11 +59,11 @@ function init() {
         mv "$EC2_CFG_FOLDER/"{"$file","$num%$suffix"} 2>/dev/null
       fi
 
-      local state
+      local connection
       # shellcheck disable=SC2034
       EC2_CFG_FILE=$num%$suffix
-      state=$(utils::get_cfg_entry state)
-      utils::set_cfg_entry state "${state:-exists}"
+      connection=$(utils::get_cfg_entry connection)
+      utils::set_cfg_entry connection "${connection:-exists}"
 
       for key in "${!instance_opts[@]}"; do
         utils::set_cfg_entry "$key" "${instance_opts[$key]}"
