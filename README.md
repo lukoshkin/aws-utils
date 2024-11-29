@@ -60,8 +60,8 @@ and execute commands remotely with a minor adjustment_
 4. **Forward ports** (Por favor)
 
    ```bash
-   ec2 porfowar  # default port is 6006
-   PORT=8080 ec2 porfowar
+   ec2 porforwar  # default port is 6006
+   PORT=8080 ec2 porforwar
    ```
 
 5. **Advanced settings for login and enhanced `connect` functionality**

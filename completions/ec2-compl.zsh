@@ -5,7 +5,7 @@ _ec2_completions() {
     'pick:Select an instance to continue with'
     'scp-file:Transfer files to or from an EC2 instance'
     'sync:Sync the host folder on an EC2 instance with the local counterpart'
-    'porfowar:Port forward from an EC2 instance'
+    'porforwar:Port forward from an EC2 instance'
     'clean-up:Clear SSH inbound rules added earlier by ec2'
     'disconnect:Disconnect from the EC2 instance'
     'install-completions:Install completions for the ec2 command'

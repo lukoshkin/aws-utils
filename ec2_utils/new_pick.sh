@@ -41,13 +41,11 @@ function create_instance_map() {
     }
     local state_sign
     case $state in
-    running) state_sign="🟢" ;;
-    stopped) state_sign="🟡" ;;
-    stopping) state_sign="🟢..🟡" ;;
-    pending) state_sign="🟡..🟢" ;;
-    *)
-      state_sign="❓"
-      ;;
+    running) state_sign=$(_c 32)"●"$RESET ;;
+    stopped) state_sign=$(_c 33)"○"$RESET ;;
+    stopping) state_sign=$(_c 33)"◐"$RESET ;;
+    pending) state_sign=$(_c 32)"◑"$RESET ;;
+    *) ;;
     esac
 
     local conn_color
@@ -69,7 +67,7 @@ function create_instance_map() {
   done <<<"$instances"
 }
 
-function pick() {
+function pk::pick() {
   local _choice choice=$1
   [[ -n $choice && $choice != = ]] && {
     choice=${choice#=}
@@ -87,11 +85,11 @@ function pick() {
       echo "${cfgs[$_choice]}"
       return 0
     else
-      echo "No option found with the #'$choice'"
-      echo "Available instances:"
+      >&2 echo "No option found with the #'$choice'"
+      >&2 echo "Available instances:"
       local num=1
       for name in "${names[@]}"; do
-        echo "$((num++))) $name"
+        >&2 echo "$((num++))) $name"
       done
       return 1
     fi
@@ -102,7 +100,7 @@ function pick() {
   }
 }
 
-function peek() {
+function pk::peek() {
   declare -A _INSTANCE_MAP
   declare -a names
   declare -a cfgs

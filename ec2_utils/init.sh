@@ -1,4 +1,4 @@
-source "$(dirname "$0")/utils.sh"
+source "$(dirname "$0")/new_utils.sh"
 
 function _check_columns() {
   local columns=(
@@ -18,7 +18,6 @@ function _check_columns() {
 }
 
 function init() {
-  EC2_CFG_FILE=main
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
@@ -33,6 +32,7 @@ function init() {
 
       local name
       local instance_id=${instance_opts[instance_id]}
+      echo "<$instance_id>"
       name=$(
         aws ec2 describe-instances \
           --instance-ids "$instance_id" \
@@ -69,5 +69,7 @@ function init() {
         utils::set_cfg_entry "$key" "${instance_opts[$key]}"
       done
     done
-  } < <(utils::get_cfg_entry instance_opts)
+  } < <(utils::get_cfg_entry instance_opts | sed '$d')
 }
+
+init "$@"

@@ -2,7 +2,7 @@
 
 _ec2_completions() {
   local subcommands
-  subcommands="connect pick scp-file sync porfowar clean-up disconnect install-completions"
+  subcommands="connect pick scp-file sync porforwar clean-up disconnect install-completions"
   COMPREPLY=() # is defined already, we just clear it
   ## Do not try `declare -a` on it ─ will break everything.
 

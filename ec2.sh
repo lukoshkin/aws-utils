@@ -37,7 +37,7 @@ ec2() {
   sync)
     bash "$_PARENT_DIR"/sync.sh "$@"
     ;;
-  porfowar)
+  porforwar)
     bash "$_PARENT_DIR"/porforwar.sh "$@"
     ;;
   clean-up)
@@ -88,7 +88,7 @@ ec2() {
     printf '  %-25s connect to the selected instance\n' 'connect'
     printf '  %-25s execute command on the host without interactive login\n' 'execute'
     printf '  %-25s transfer file or archive between the client and host\n' 'scp-file'
-    printf '  %-25s forward ports from the host to the client\n' 'porfowar'
+    printf '  %-25s forward ports from the host to the client\n' 'porforwar'
     printf '  %-25s clean up earlier added inbound rules by ec2\n' 'clean-up'
     printf '  %-25s shutdown the selected instance and run clean-up\n' 'disconnect'
     printf '  %-25s install the shell completions for ec2 command\n' 'install-completions'

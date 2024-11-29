@@ -2,8 +2,7 @@
 
 EC2_FOLDER=$(dirname "$(dirname "$(realpath "$0")")")
 EC2_CFG_FOLDER=$EC2_FOLDER/ec2_login_opts
-EC2_CFG_MAIN=$EC2_CFG_FOLDER/main.cfg
-EC2_CFG_FOLDER=$EC2_CFG_FOLDER/instances
+EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
 EC2_CFG_FILE=
 
 _cfg() {
@@ -68,6 +67,7 @@ utils::get_cfg_entry() {
 }
 
 utils::set_cfg_entry() {
+  [[ $# -eq 2 && -z $2 ]] && return
   local key=${1%:}
   local value=$2
   local cfg
