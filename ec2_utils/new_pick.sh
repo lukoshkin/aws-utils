@@ -1,15 +1,20 @@
+#!/bin/bash
+
 source "$(dirname "$0")/new_utils.sh"
 RESET="\033[0m"
 
 _c() {
+  local text=$1
+  shift
+
   local fg=$1
   local ta=${2:-$_TEXT_ATTR}
   local bg=${3:-$_BG_COLOR}
 
   if [[ -n $bg ]]; then
-    echo -e "\033[${ta:-0};${fg};${bg}m"
+    echo "\033[${ta:-0};${fg};${bg}m$text$RESET"
   fi
-  echo -e "\033[${ta:-0};${fg}m"
+  echo "\033[${ta:-0};${fg}m$text$RESET"
 }
 
 function create_instance_map() {
@@ -28,43 +33,50 @@ function create_instance_map() {
   local current_cfg
   current_cfg=$(utils::get_cfg_entry cfg_file)
 
-  declare -a opts
   while IFS='%' read -r num name iid; do
     local conn state selected=0 opt='  '
     EC2_CFG_FILE="$num%$name%$iid"
     conn=$(utils::get_cfg_entry connection)
     state=$(utils::get_cfg_entry state)
 
-    [[ $EC2_CFG_FILE == "$current_cfg" ]] && {
+    [[ $EC2_CFG_FILE = "$current_cfg" ]] && {
       selected=9
       opt="*"
     }
     local state_sign
     case $state in
-    running) state_sign=$(_c 32)"●"$RESET ;;
-    stopped) state_sign=$(_c 33)"○"$RESET ;;
-    stopping) state_sign=$(_c 33)"◐"$RESET ;;
-    pending) state_sign=$(_c 32)"◑"$RESET ;;
+    running) state_sign=$(_c ● 32) ;;
+    stopped) state_sign=$(_c ○ 33) ;;
+    stopping) state_sign=$(_c ◐ 33) ;;
+    pending) state_sign=$(_c ◑ 32) ;;
     *) ;;
     esac
 
-    local conn_color
     local _TEXT_ATTR=$selected
     case $conn in
-    exists) ;;
-    active) conn_color=$(_c 32) ;;
-    broken) conn_color=$(_c 31) ;;
-    missing) conn_color=$(_c 47 9) ;;
+    exists) name=$(_c "$name" 37) ;;
+    active) name=$(_c "$name" 32) ;;
+    broken) name=$(_c "$name" 31) ;;
+    missing) name=$(_c "$name" 47 9) ;;
     *)
       >&2 echo "Unknown connection state: $conn"
       return 1
       ;;
     esac
 
-    opt+="$conn_color$name$RESET $state_sign"
+    opt+="$name $state_sign"
     _INSTANCE_MAP[$opt]=$EC2_CFG_FILE
-    opts+=("$opt")
   done <<<"$instances"
+}
+
+function peek() {
+  echo "Available instances:"
+  local num=1
+  for name in "${!_INSTANCE_MAP[@]}"; do
+    echo -e "$((num++))) $name"
+  done
+
+  [[ "$1" = + ]] && echo "Select the one to connect to: "
 }
 
 function pk::pick() {
@@ -86,29 +98,22 @@ function pk::pick() {
       return 0
     else
       >&2 echo "No option found with the #'$choice'"
-      >&2 echo "Available instances:"
-      local num=1
-      for name in "${names[@]}"; do
-        >&2 echo "$((num++))) $name"
-      done
+      >&2 peek
       return 1
     fi
   }
-  echo "Select the instance to connect to:"
-  choice=$(utils::select_option "${names[@]}") && {
-    echo "${_INSTANCE_MAP[$choice]}"
-  }
+  read -rp "$(peek +)"
+  if [[ -n ${names[$REPLY - 1]} ]]; then
+    echo "${_INSTANCE_MAP[${names[$REPLY - 1]}]}"
+    return 0
+  else
+    >&2 echo "Invalid selection"
+    return 1
+  fi
 }
 
 function pk::peek() {
   declare -A _INSTANCE_MAP
-  declare -a names
-  declare -a cfgs
   create_instance_map || return 1
-  names=("${!_INSTANCE_MAP[@]}")
-  echo "Available instances:"
-  local num=1
-  for name in "${names[@]}"; do
-    echo "$((num++))) $name"
-  done
+  peek
 }

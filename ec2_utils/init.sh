@@ -11,13 +11,15 @@ function _check_columns() {
   sorted_headers=("$(printf "%s\n" "${@}" | sort)")
   sorted_columns=("$(printf "%s\n" "${columns[@]}" | sort)")
   [[ "${sorted_headers[*]}" = "${sorted_columns[*]}" ]] || {
-    echo "Expected columns: ${columns[*]}"
-    echo "Actual columns: ${headers[*]}"
+    >&2 echo "Expected columns: ${columns[*]}"
+    >&2 echo "Actual columns: ${headers[*]}"
     return 1
   }
 }
 
 function init() {
+  ## We could have shown explicitly that the file is not set
+  # EC2_CFG_FILE=
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
@@ -32,7 +34,6 @@ function init() {
 
       local name
       local instance_id=${instance_opts[instance_id]}
-      echo "<$instance_id>"
       name=$(
         aws ec2 describe-instances \
           --instance-ids "$instance_id" \
@@ -68,6 +69,7 @@ function init() {
       for key in "${!instance_opts[@]}"; do
         utils::set_cfg_entry "$key" "${instance_opts[$key]}"
       done
+      echo "✅ $name"
     done
   } < <(utils::get_cfg_entry instance_opts | sed '$d')
 }

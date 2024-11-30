@@ -98,9 +98,9 @@ utils::set_cfg_entry() {
   fi
 }
 
-EC2_USER=$(utils::get_cfg_entry user "$HOME_LOGIN_CFG")
-EC2_USER=${EC2_USER:-'ubuntu'}
-TMP_LOGIN_LOG=/tmp/ec2_${USER}-${EC2_USER}-last_login.log
+# EC2_USER=$(utils::get_cfg_entry user "$HOME_LOGIN_CFG")
+# EC2_USER=${EC2_USER:-'ubuntu'}
+# TMP_LOGIN_LOG=/tmp/ec2_${USER}-${EC2_USER}-last_login.log
 declare -a AWS_SSH_OPTS=(
   '-o'
   'IdentitiesOnly=yes'

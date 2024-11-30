@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 source "$(dirname "$0")/aws-login.sh"
 source "$(dirname "$0")/new_utils.sh"
 source "$(dirname "$0")/new_pick.sh"
@@ -91,7 +91,7 @@ function connect() {
 
   echo '---'
   echo "Connecting to <$_LOGINSTR>"
-  echo "Your instance's name: "
+  echo "Your instance's name: $(cut -d% -f2 <<<"$EC2_CFG_FILE")"
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
   echo '---'
