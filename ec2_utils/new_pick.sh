@@ -57,6 +57,7 @@ function create_instance_map() {
     exists) name=$(_c "$name" 37) ;;
     active) name=$(_c "$name" 32) ;;
     broken) name=$(_c "$name" 31) ;;
+    blocked) name=$(_c "$name" 33) ;;
     missing) name=$(_c "$name" 47 9) ;;
     *)
       >&2 echo "Unknown connection state: $conn"
@@ -76,7 +77,11 @@ function peek() {
     echo -e "$((num++))) $name"
   done
 
-  [[ "$1" = + ]] && echo "Select the one to connect to: "
+  if [[ $1 = + ]]; then
+    echo "Select the one to connect to: "
+  elif [[ -z $1 ]]; then
+    >&2 echo Impl.error: wrong positional argument
+  fi
 }
 
 function pk::pick() {
@@ -103,7 +108,7 @@ function pk::pick() {
     fi
   }
   read -rp "$(peek +)"
-  if [[ -n ${names[$REPLY - 1]} ]]; then
+  if [[ -n $REPLY && -n ${names[$REPLY - 1]} ]]; then
     echo "${_INSTANCE_MAP[${names[$REPLY - 1]}]}"
     return 0
   else

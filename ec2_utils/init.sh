@@ -18,8 +18,7 @@ function _check_columns() {
 }
 
 function init() {
-  ## We could have shown explicitly that the file is not set
-  # EC2_CFG_FILE=
+  # EC2_CFG_FILE= # We could have shown explicitly the var is empty
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
@@ -34,6 +33,7 @@ function init() {
 
       local name
       local instance_id=${instance_opts[instance_id]}
+      utils::valid_instance_id_check $instance_id || return 1
       name=$(
         aws ec2 describe-instances \
           --instance-ids "$instance_id" \

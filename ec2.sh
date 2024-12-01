@@ -19,6 +19,9 @@ ec2() {
   pick)
     bash "$_PARENT_DIR"/pick.sh "$@"
     ;;
+  add)
+    bash "$_PARENT_DIR"/add.sh "$@"
+    ;;
   ls | info)
     bash "$_PARENT_DIR"/info.sh "$@"
     ;;

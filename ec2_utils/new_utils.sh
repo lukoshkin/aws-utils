@@ -98,9 +98,10 @@ utils::set_cfg_entry() {
   fi
 }
 
-# EC2_USER=$(utils::get_cfg_entry user "$HOME_LOGIN_CFG")
-# EC2_USER=${EC2_USER:-'ubuntu'}
-# TMP_LOGIN_LOG=/tmp/ec2_${USER}-${EC2_USER}-last_login.log
+function utils::ec2_log_file() {
+  echo "/tmp/ec2_$USER-$(utils::get_cfg_entry user)-last_login.log"
+}
+
 declare -a AWS_SSH_OPTS=(
   '-o'
   'IdentitiesOnly=yes'
@@ -115,6 +116,13 @@ declare -a AWS_SSH_OPTS=(
 # -o UserKnownHostsFile=/dev/null ─ do not pollute known_hosts with a varying IP
 # -o StrictHostKeychecking=no ─ skip the question about adding a new fingerprint
 # -o IdentitiesOnly ─ ignore your '.ssh/config'
+
+utils::valid_instance_id_check() {
+  [[ $1 =~ ^i- ]] || {
+    >&2 echo "Invalid instance id: <$1>"
+    return 1
+  }
+}
 
 utils::strip_quotes() {
   local str=$1

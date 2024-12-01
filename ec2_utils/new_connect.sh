@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+# set -eo pipefail
 source "$(dirname "$0")/aws-login.sh"
-source "$(dirname "$0")/new_utils.sh"
 source "$(dirname "$0")/new_pick.sh"
 
-function help_msg() {
+function _help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
   echo "Connect to the specified EC2 instance"
   echo
@@ -21,6 +20,15 @@ function help_msg() {
   echo "  -n, --non-interactive               A security group auto-select (may be extended later)"
 }
 
+_update_connection_status() {
+  if [[ $? -eq 0 ]]; then
+    utils::set_cfg_entry connection active
+    utils::set_cfg_entry logstr "$_LOGINSTR"
+  else
+    utils::set_cfg_entry connection broken
+  fi
+}
+
 function connect() {
   local long_opts="non-interactive,pick-instance:,execute:,detach,ip:,revoke-time:,help"
   local short_opts="n,p:,e:,d,t:,h"
@@ -31,19 +39,15 @@ function connect() {
     return 1
   }
   eval set -- "$params"
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
 
   declare -a _ADD_IP4_TO_SG_OPTS
-  local exec_cmd detach=false clear_logstr=false
+  local exec_cmd detach=false
   while [[ $1 != -- ]]; do
     case $1 in
     -h | --help)
-      help_msg
+      _help_msg
       return
       ;;
-    -p | -t | --ip | --pick-instance | --revoke-time)
-      clear_logstr=true
-      ;;&
     -p | --pick-instance)
       EC2_CFG_FILE=$(pk::pick "$2") || return 1
       shift 2
@@ -69,20 +73,21 @@ function connect() {
       shift
       ;;
     *)
-      echo Impl.error
+      echo Impl.error: param parsing failed
       return 1
       ;;
     esac
   done
 
   shift
-
-  if $clear_logstr; then
-    utils::set_cfg_entry 'logstr'
-  fi
-
+  [[ -n $1 ]] && {
+    >&2 echo "'connect' does not accept any positional arguments"
+    return 1
+  }
   local _LOGINSTR
-  login::sanity_checks "$1" || return 1
+  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
+  [[ -z $EC2_CFG_FILE ]] && EC2_CFG_FILE=$(pk::pick) || return 1
+  login::sanity_checks_and_setup_finalization || return 1
 
   entrypoint=$(utils::get_cfg_entry entrypoint)
   entrypoint=$(utils::strip_quotes "${entrypoint:-':'}")
@@ -91,39 +96,45 @@ function connect() {
 
   echo '---'
   echo "Connecting to <$_LOGINSTR>"
-  echo "Your instance's name: $(cut -d% -f2 <<<"$EC2_CFG_FILE")"
+  echo "The selected instance name: $(cut -d% -f2 <<<"$EC2_CFG_FILE")"
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
   echo '---'
 
+  local ec2_log_file
+  ec2_log_file=$(utils::ec2_log_file)
   declare -a aws_ssh_opts
   aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   if [[ -n $entrypoint && $entrypoint != ':' ]]; then
     timeout "${TIMEOUT:-20}" ssh "${aws_ssh_opts[@]}" \
-      "$_LOGINSTR" "$entrypoint &>>$TMP_LOGIN_LOG" || {
+      "$_LOGINSTR" "$entrypoint &>>$ec2_log_file" || {
+      echo "(DEBUG: the return status is <$?>)"
       echo Was not able to start the project containers!
       echo -n "Check the network connection or that you typed"
       echo " in the correct 'login_and_host' string!"
-      # Setting `TIMEOUT=` var empty will ignore the command execution status
+      utils::set_cfg_entry connection broken
+
+      ## Setting `TIMEOUT=` var empty will ignore
+      ## the execution status of the command above
       [[ -z ${TIMEOUT+any} || -n ${TIMEOUT} ]] && exit 1
     }
+    _update_connection_status
   fi
-  utils::set_cfg_entry 'logstr' "$_LOGINSTR"
-  utils::set_cfg_entry 'workdir' "$workdir"
   if ! $detach; then
-    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$_LOGINSTR" \
-      "cd $workdir &>>$TMP_LOGIN_LOG; exec \$SHELL"
-    # -t to set a working directory and run interactive session from it
     # -A to forward your '.ssh' folder
-    return
-  fi
-  if [[ -n $exec_cmd ]]; then
+    # -t to set a working directory and run interactive session from it
+    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$_LOGINSTR" \
+      "cd $workdir &>>$ec2_log_file; exec \$SHELL"
+    _update_connection_status
+  elif [[ -n $exec_cmd ]]; then # when provided '-e', detach is always false
     echo "Executing command: <$exec_cmd>"
     ssh -A "${aws_ssh_opts[@]}" "$_LOGINSTR" \
-      "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $TMP_LOGIN_LOG"
+      "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
+    _update_connection_status
+    echo "---"
   fi
-  echo -e "\nDetaching.."
+  echo -e "Detaching.."
 }
 
 connect "$@"

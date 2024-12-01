@@ -1,128 +1,100 @@
 #!/bin/bash
 
-source "$(dirname "$0")/utils.sh"
+source "$(dirname "$0")/new_utils.sh"
 
 _ECHO() {
   echo -e "\033[0;35m$1\033[0m"
 }
 
-infer_login_str() {
+function infer_login_str() {
   local check_in_str=$1
   [[ -z $check_in_str ]] && {
     check_in_str=$(utils::get_cfg_entry logstr)
     [[ -z $check_in_str ]] && return 1
     echo "$check_in_str"
   }
+  local ec2_user
+  ec2_user=$(utils::get_cfg_entry user)
+  ec2_user=${ec2_user:-ubuntu}
   if [[ $check_in_str = ec2*amazonaws.com ]]; then
-    check_in_str="$EC2_USER@$check_in_str"
+    check_in_str="$ec2_user@$check_in_str"
   elif [[ $check_in_str != *ec2*amazonaws.com ]]; then
     check_in_str=${check_in_str//./-}
-    check_in_str="$EC2_USER@ec2-$check_in_str.compute-1.amazonaws.com"
+    check_in_str="$ec2_user@ec2-$check_in_str.compute-1.amazonaws.com"
   fi
   echo "$check_in_str"
 }
 
-function login::sanity_checks() {
-  local instance_id sshkey user_input=$1
-  _LOGINSTR=$(utils::get_cfg_entry logstr)
+function login::sanity_checks_and_setup_finalization() {
+  local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
-  sshkey=$(utils::get_cfg_entry sshkey)
+  _LOGINSTR=$(utils::get_cfg_entry logstr)
 
-  if [[ -z $user_input ]]; then
-    if [[ -z $instance_id ]]; then
-      if [[ -z $_LOGINSTR ]]; then
-        _ECHO "Try to pick the instance to connect to with the '-p' option."
-        _ECHO "You may need to populate the 'instance_ids:-' block in the"
-        _ECHO "global config ($HOME_LOGIN_CFG) first."
-      fi
-    else
-      local ec2_state
-      ec2_state=$(
-        aws ec2 describe-instances \
-          --instance-ids "$instance_id" \
-          --query 'Reservations[*].Instances[*].State.Name' \
-          --output text
-      )
-      if ! [[ $ec2_state =~ (stopped|running) ]]; then
-        _ECHO "The machine is currently in a transient state: '$ec2_state'"
-        _ECHO 'Re-run the command in a few seconds'
-        _ECHO 'Use the following command to check the status manually:'
-        _ECHO 'aws ec2 describe-instances \'
-        _ECHO "  --instance-ids $instance_id \\"
-        _ECHO '  --query "Reservations[*].Instances[*].State.Name" \'
-        _ECHO '  --output text'
-        return 1
-      fi
-      if [[ ${#_ADD_IP4_TO_SG_OPTS[@]} -gt 0 ]]; then
-        echo "Managing SSH inbound rules with '${_ADD_IP4_TO_SG_OPTS[*]}'"
-      fi
-      login::maybe_add_ip4_to_sg "$instance_id" "${_ADD_IP4_TO_SG_OPTS[@]}"
-      if [[ $ec2_state = stopped ]]; then
-        login::start_ec2_instances "$instance_id"
-        echo "Idle until the instance is in 'pending' state.."
-        aws ec2 wait instance-running --instance-ids "$instance_id"
-
-        local sleep_time
-        sleep_time=$(utils::get_cfg_entry idle_on_first_login)
-        sleep_time=${sleep_time:-6}
-        echo -n "Idle for another ${sleep_time} seconds"
-        echo " for all actions to take effect.."
-        sleep "$sleep_time"
-      fi
-      user_input=$(login::ec2_public_ip_from_instance_id "$instance_id")
-      _LOGINSTR=$(infer_login_str "$user_input")
-    fi
-  elif [[ $_LOGINSTR = $(infer_login_str "$user_input") ]]; then
-    ## Likely we are OK since we previously connected to it already.
-    echo "Using the cached IP address.."
-    return
-  elif [[ -z $sshkey ]]; then
-    _ECHO "Your setup does not allow to connect to unknown hosts. At least,"
-    _ECHO "specify the SSH key in your global config ($HOME_LOGIN_CFG). Even"
-    _ECHO "better would be to select the instance to connect to among those"
-    _ECHO "listed in the global config under 'instance_ids:-' key"
-    return 1
-  else
-    msg="NOTE: You connect to 'unknown' host (that is, not listed under the"
-    msg+="\n'instance_ids' key in the global config file). Make sure to check"
-    msg+='\nthe security group of the instance you are connecting to and add'
-    msg+='\nthe IP address to the inbound rules manually if need be.'
-    local instance_ids
-    instance_ids=$(utils::get_cfg_entry instance_ids:- "$HOME_LOGIN_CFG")
-    [[ -z $instance_ids ]] && {
-      _ECHO "$msg"
-      _LOGINSTR=$(infer_login_str "$user_input")
-      return
-    }
-    local found_iid
-    while IFS='=' read -r iid pem_file; do
-      [[ $pem_file = "$sshkey" ]] && found_iid=$iid
-      break
-    done <<<"$instance_ids"
-    if [[ -z $found_iid ]]; then
-      _ECHO "$msg"
-      _LOGINSTR=$(infer_login_str "$user_input")
-      return
-    fi
-    local ip4
-    _LOGINSTR=$(infer_login_str "$user_input")
-    ip4=$(login::ec2_public_ip_from_instance_id "$instance_id")
-    if [[ $_LOGINSTR != $(infer_login_str "$ip4") ]]; then
-      _ECHO "$msg"
-    fi
-  fi
-}
-
-valid_instance_id_check() {
-  [[ $1 =~ ^i- ]] || {
-    echo "Invalid instance id: <$1>"
+  [[ -z $instance_id ]] && {
+    _ECHO "Hmm, curious.. There is no 'instance_id' in $EC2_CFG_FILE"
+    _ECHO "Try to mend this with 'ec2 init' call."
     return 1
   }
+  [[ -n $_LOGINSTR ]] && {
+    echo "Using the cached login and host string.."
+    return
+  }
+
+  local ec2_state
+  ec2_state=$(
+    aws ec2 describe-instances \
+      --instance-ids "$instance_id" \
+      --query 'Reservations[*].Instances[*].State.Name' \
+      --output text
+  )
+  if ! [[ $ec2_state =~ (stopped|running) ]]; then
+    _ECHO "The machine is currently in a transient state: '$ec2_state'"
+    _ECHO 'Re-run the command in a few seconds'
+    _ECHO 'Use the following command to check the status manually:'
+    _ECHO 'aws ec2 describe-instances \'
+    _ECHO "  --instance-ids $instance_id \\"
+    _ECHO '  --query "Reservations[*].Instances[*].State.Name" \'
+    _ECHO '  --output text'
+    return 1
+  fi
+  if [[ ${#_ADD_IP4_TO_SG_OPTS[@]} -gt 0 ]]; then
+    echo "Managing SSH inbound rules with '${_ADD_IP4_TO_SG_OPTS[*]}'"
+    login::clean_up
+  fi
+  local ip4 # client's IP4
+  ip4=$(utils::get_cfg_entry revoke-rule-uri)
+  ip4=$(cut -d% -f2 <<<"$ip4")
+
+  if [[ -z $ip4 ]]; then
+    login::maybe_add_ip4_to_sg "$instance_id" "${_ADD_IP4_TO_SG_OPTS[@]}"
+  elif ! [[ $ip4 = $(curl -s ifconfig.me)/32 ]]; then
+    if ! [[ $ip4 = 0.0.0.0/0 ]]; then
+      >&2 echo "The current IP address is not white-listed"
+      utils::set_cfg_entry connection "blocked"
+    fi
+  fi
+
+  if [[ $ec2_state = stopped ]]; then
+    login::start_ec2_instances "$instance_id"
+    echo "Idle until the instance is in 'pending' state.."
+    aws ec2 wait instance-running --instance-ids "$instance_id"
+    utils::set_cfg_entry state "running"
+
+    local sleep_time
+    sleep_time=$(utils::get_cfg_entry idle_on_first_login)
+    sleep_time=${sleep_time:-6}
+    echo -n "Idle for another ${sleep_time} seconds"
+    echo " for all actions to take effect.."
+    sleep "$sleep_time"
+  fi
+  local ip4 # host
+  ip4=$(login::ec2_public_ip_from_instance_id "$instance_id")
+  _LOGINSTR=$(infer_login_str "$ip4")
 }
 
 login::start_ec2_instances() {
   for instance_id in "$@"; do
-    valid_instance_id_check "$instance_id" || return 1
+    utils::valid_instance_id_check "$instance_id" || return 1
   done
 
   aws ec2 start-instances --instance-ids "$@"
@@ -134,7 +106,7 @@ login::revoke_ssh_inbound_rule() {
     --group-id "$sg_id" \
     --protocol tcp \
     --port 22 \
-    --cidr "$ip4" 2> >(tee -a "$TMP_LOGIN_LOG") >/dev/null
+    --cidr "$ip4" 2> >(tee -a "$(utils::ec2_log_file)") >/dev/null
   echo "The ssh access for '$ip4' has been revoked"
 }
 
@@ -157,7 +129,8 @@ login::maybe_add_ip4_to_sg() {
       shift
       ;;
     --ip)
-      ip4=${2:-$ip4}
+      local _ip4=${2#=}
+      ip4=${_ip4:-$ip4}
       shift 2
       ;;
     -t | --revoke-time)
@@ -172,7 +145,7 @@ login::maybe_add_ip4_to_sg() {
   done
 
   shift
-  valid_instance_id_check "$1" || return 1
+  utils::valid_instance_id_check "$1" || return 1
   local instance_id=$1
 
   echo "Checking the inbound rules for the instance.."
@@ -200,11 +173,11 @@ login::maybe_add_ip4_to_sg() {
   if [[ ${#sg_ids[@]} -eq 1 || $non_interactive ]]; then
     sg_id=${sg_ids[0]}
   else
-    echo "Select the security group to add the SSH inbound rule to:"
+    PS3="Select the security group to add the SSH inbound rule to:"
     sg_id=$(utils::select_option "${sg_ids[@]}") || return 1
   fi
   if [[ $revoke_time -le 0 ]]; then
-    utils::set_cfg_entry revoke-rule-uri:- "$instance_id=$ip4=$sg_id"
+    utils::set_cfg_entry revoke-rule-uri:- "$instance_id%$ip4%$sg_id"
   else
     echo "Revoking the ssh access for '$ip4' in $revoke_time seconds"
     {
@@ -216,11 +189,11 @@ login::maybe_add_ip4_to_sg() {
     --group-id "$sg_id" \
     --protocol tcp \
     --port 22 \
-    --cidr "$ip4" 2> >(tee -a "$TMP_LOGIN_LOG") >/dev/null
+    --cidr "$ip4" 2> >(tee -a "$(utils::ec2_log_file)") >/dev/null
 }
 
-login::ec2_public_ip_from_instance_id() {
-  valid_instance_id_check "$1" || return 1
+function login::ec2_public_ip_from_instance_id() {
+  utils::valid_instance_id_check "$1" || return 1
   local instance_id=$1
   aws ec2 describe-instances \
     --instance-ids "$instance_id" \
@@ -228,58 +201,30 @@ login::ec2_public_ip_from_instance_id() {
     --output text
 }
 
-## TODO: Remove
-function select_instance_old() {
-  local choice=$1
-  ## TODO: if `choice` is given, no need to call `aws`,
-  ## and thus the command can be done much quicker.
-  local instance
-  local raw_instance_ids
-  raw_instance_ids=$(login::get_cfg_entry instance_ids "$HOME_LOGIN_CFG")
-  [[ -z ${raw_instance_ids[*]} ]] && {
-    echo "No instances to select from"
-    echo "Check your 'instance_ids:-' key in $HOME_LOGIN_CFG"
+function login::clean_up() {
+  [[ -z $instance_id ]] && {
+    >&2 echo 'Impl.error: No instance id found.'
     return 1
   }
-  declare -A instance_ids
-  declare -A ssh_keys
-  while IFS='=' read -r iid pem_file; do
-    [[ -z $pem_file ]] && continue
-    local iname
-    iname=$(
-      aws ec2 describe-instances \
-        --instance-ids "$iid" \
-        --query "Reservations[].Instances[].Tags[?Key=='Name'].Value" \
-        --output text
-    )
-    ssh_keys["$iname"]="$pem_file"
-    instance_ids["$iname"]="$iid"
-  done <<<"$raw_instance_ids"
-  [[ -n $choice && $choice != = ]] && {
-    choice=${choice#=}
-    local _choice=$choice
-    [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
-    declare -a tmp=("${!instance_ids[@]}")
-    instance=${tmp[$_choice]}
-    [[ -z $instance ]] && {
-      echo "No option found with the #'$choice'"
-      echo "Available instances:"
-      local num=1
-      for iid in "${!instance_ids[@]}"; do
-        echo "$num) $iid"
-        ((num++))
-      done
-      return 1
-    }
-    login::set_cfg_entry instance_id "${instance_ids[$instance]}"
-    login::set_cfg_entry sshkey "${ssh_keys[$instance]}"
-    return 0
+  local revoke_rule_uri
+  echo "Searching the inbound rules added by ec2.."
+  revoke_rule_uri=$(utils::get_cfg_entry revoke-rule-uri:-)
+  [[ -z $revoke_rule_uri ]] && {
+    echo "No rules found."
+    return
   }
-  echo "Select the instance to connect to:"
-  instance=$(login::select_option "${!instance_ids[@]}") || {
-    echo "Invalid selection"
-    return 1
-  }
-  login::set_cfg_entry instance_id "${instance_ids[$instance]}"
-  login::set_cfg_entry sshkey "${ssh_keys[$instance]}"
+  local instance_id
+  instance_id=$(utils::get_cfg_entry instance_id)
+  local iid ip4 sg_id
+  local found_any=false
+  if [[ -n $revoke_rule_uri ]]; then
+    while IFS=% read -r iid ip4 sg_id; do
+      [[ $iid != "$instance_id" ]] && continue
+      login::revoke_ssh_inbound_rule "$sg_id" "$ip4"
+      found_any=true
+    done <<<"$revoke_rule_uri"
+  fi
+  if $found_any; then
+    echo "Cleaned up!"
+  fi
 }
