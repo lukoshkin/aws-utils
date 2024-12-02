@@ -26,20 +26,22 @@ function infer_login_str() {
 }
 
 function login::sanity_checks_and_setup_finalization() {
+  if ${_SKIP_CHECKS:-false}; then
+    _LOGINSTR=$(utils::get_cfg_entry logstr)
+    [[ -n $_LOGINSTR ]] && {
+      echo "Using the cached login and host string.."
+      return
+    }
+    echo "Not able to skip the sanity checks, since "
+    echo "the cached login and host string is not found."
+  fi
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
-  _LOGINSTR=$(utils::get_cfg_entry logstr)
-
   [[ -z $instance_id ]] && {
     _ECHO "Hmm, curious.. There is no 'instance_id' in $EC2_CFG_FILE"
     _ECHO "Try to mend this with 'ec2 init' call."
     return 1
   }
-  [[ -n $_LOGINSTR ]] && {
-    echo "Using the cached login and host string.."
-    return
-  }
-
   local ec2_state
   ec2_state=$(
     aws ec2 describe-instances \

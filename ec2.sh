@@ -51,8 +51,8 @@ ec2() {
       echo "Usage: ec2 install-completions [install_path]"
       echo
       echo "Default 'install_path' value:"
-      echo 'Zsh: $XDG_CONFIG_HOME/zsh/.zshrc OR ~/.zshrc'
-      echo 'Bash: ~/.bashrc'
+      echo " - Zsh: \$XDG_CONFIG_HOME/zsh/.zshrc OR ~/.zshrc"
+      echo ' - Bash: ~/.bashrc'
       return 1
     }
 

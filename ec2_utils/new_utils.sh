@@ -151,3 +151,18 @@ utils::maybe_set_login_string() {
   }
   echo "$msg"
 }
+
+utils::c() {
+  local text=$1
+  local reset="\033[0m"
+  shift
+
+  local fg=$1
+  local ta=${2:-$_TEXT_ATTR}
+  local bg=${3:-$_BG_COLOR}
+
+  if [[ -n $bg ]]; then
+    echo "\033[${ta:-0};${fg};${bg}m$text$reset"
+  fi
+  echo "\033[${ta:-0};${fg}m$text$reset"
+}

@@ -4,7 +4,7 @@
 source "$(dirname "$0")/aws-login.sh"
 source "$(dirname "$0")/new_pick.sh"
 
-function _help_msg() {
+_help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
   echo "Connect to the specified EC2 instance"
   echo
@@ -30,8 +30,8 @@ _update_connection_status() {
 }
 
 function connect() {
-  local long_opts="non-interactive,pick-instance:,execute:,detach,ip:,revoke-time:,help"
-  local short_opts="n,p:,e:,d,t:,h"
+  local long_opts="non-interactive,skip-checks,pick-instance:,execute:,detach,ip:,revoke-time:,help"
+  local short_opts="n,s,p:,e:,d,t:,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -39,22 +39,26 @@ function connect() {
     return 1
   }
   eval set -- "$params"
+  echo $params
 
   declare -a _ADD_IP4_TO_SG_OPTS
-  local exec_cmd detach=false
+  local exec_cmd detach=false _SKIP_CHECKS=false
   while [[ $1 != -- ]]; do
     case $1 in
+    *) shift ;;&
     -h | --help)
       _help_msg
       return
       ;;
+    -s | --skip-checks)
+      _SKIP_CHECKS=true
+      ;;
     -p | --pick-instance)
       EC2_CFG_FILE=$(pk::pick "$2") || return 1
-      shift 2
+      shift
       ;;
     -d | --detach)
       detach=true
-      shift
       ;;
     -e | --execute)
       ## TODO: make a separate subcommand for it. Pass option to make more
@@ -62,15 +66,14 @@ function connect() {
       ## 'ClientAliveCountMax'.
       detach=true
       exec_cmd="$2"
-      shift 2
+      shift
       ;;
     -t | --ip | --revoke-time)
       _ADD_IP4_TO_SG_OPTS+=("$1" "$2")
-      shift 2
+      shift
       ;;
     -n | --non-interactive)
       _ADD_IP4_TO_SG_OPTS+=("$1")
-      shift
       ;;
     *)
       echo Impl.error: param parsing failed
@@ -84,6 +87,7 @@ function connect() {
     >&2 echo "'connect' does not accept any positional arguments"
     return 1
   }
+  echo "<$_SKIP_CHECKS>"
   local _LOGINSTR
   EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   [[ -z $EC2_CFG_FILE ]] && EC2_CFG_FILE=$(pk::pick) || return 1

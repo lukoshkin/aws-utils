@@ -1,21 +1,6 @@
 #!/bin/bash
 
 source "$(dirname "$0")/new_utils.sh"
-RESET="\033[0m"
-
-_c() {
-  local text=$1
-  shift
-
-  local fg=$1
-  local ta=${2:-$_TEXT_ATTR}
-  local bg=${3:-$_BG_COLOR}
-
-  if [[ -n $bg ]]; then
-    echo "\033[${ta:-0};${fg};${bg}m$text$RESET"
-  fi
-  echo "\033[${ta:-0};${fg}m$text$RESET"
-}
 
 function create_instance_map() {
   local instances
@@ -33,55 +18,88 @@ function create_instance_map() {
   local current_cfg
   current_cfg=$(utils::get_cfg_entry cfg_file)
 
-  while IFS='%' read -r num name iid; do
+  while IFS=% read -r num name iid; do
     local conn state selected=0 opt='  '
     EC2_CFG_FILE="$num%$name%$iid"
     conn=$(utils::get_cfg_entry connection)
     state=$(utils::get_cfg_entry state)
-
     [[ $EC2_CFG_FILE = "$current_cfg" ]] && {
       selected=9
-      opt="*"
+      opt="* "
     }
-    local state_sign
-    case $state in
-    running) state_sign=$(_c ● 32) ;;
-    stopped) state_sign=$(_c ○ 33) ;;
-    stopping) state_sign=$(_c ◐ 33) ;;
-    pending) state_sign=$(_c ◑ 32) ;;
-    *) ;;
-    esac
-
     local _TEXT_ATTR=$selected
     case $conn in
-    exists) name=$(_c "$name" 37) ;;
-    active) name=$(_c "$name" 32) ;;
-    broken) name=$(_c "$name" 31) ;;
-    blocked) name=$(_c "$name" 33) ;;
-    missing) name=$(_c "$name" 47 9) ;;
+    exists) name=$(utils::c "$name" 37) ;;
+    active) name=$(utils::c "$name" 32) ;;
+    broken) name=$(utils::c "$name" 31) ;;
+    blocked) name=$(utils::c "$name" 33) ;;
+    missing) name=$(utils::c "$name" 47 9) ;;
     *)
-      >&2 echo "Unknown connection state: $conn"
+      >&2 echo "Impl.error: Unknown connection state: $conn"
       return 1
       ;;
     esac
 
-    opt+="$name $state_sign"
+    opt+="$name"
     _INSTANCE_MAP[$opt]=$EC2_CFG_FILE
   done <<<"$instances"
 }
 
-function peek() {
-  echo "Available instances:"
-  local num=1
+function enrich_instance_map() {
+  echo "Updating the context.."
   for name in "${!_INSTANCE_MAP[@]}"; do
+    local instance_id state
+    instance_id=$(cut -d% -f3 <<<"${_INSTANCE_MAP[$name]}") || {
+      echo 'Impl.error: Improper file name format'
+      return 2
+    }
+    state=$(
+      aws ec2 describe-instances \
+        --instance-ids "$instance_id" \
+        --query 'Reservations[*].Instances[*].State.Name' \
+        --output text
+    ) || {
+      echo "Failed to get the state of the instance: $instance_id"
+      return 2
+    }
+    local state_sign
+    case $state in
+    running) state_sign=$(utils::c ● 32) ;;
+    stopped) state_sign=$(utils::c ○ 33) ;;
+    stopping) state_sign=$(utils::c ◐ 33) ;;
+    pending) state_sign=$(utils::c ◑ 32) ;;
+    *) ;;
+    esac
+    name+=" $state_sign"
+    _ENRICHED_INSTANCE_MAP[$name]=${_INSTANCE_MAP[$name]}
+  done
+}
+
+function peek() {
+  local keymap prompt
+  case $1 in
+  *)
+    [[ $# -gt 0 ]] && ! [[ $1 =~ ^(\+|\?|\+\?|\?\+)$ ]] && {
+      echo "Impl.error: Invalid argument: <$1>"
+      echo "Allowed ones: '?', '+', '?+', '+?'"
+      return 1
+    }
+    keymap=("${!_INSTANCE_MAP[@]}")
+    ;;&
+  *\+*)
+    declare -A _ENRICHED_INSTANCE_MAP
+    enrich_instance_map
+    keymap=("${!_ENRICHED_INSTANCE_MAP[@]}")
+    ;;&
+  *\?*) prompt="Select the one to connect to: " ;;
+  esac
+
+  local num=1
+  echo -e "$(utils::c "Available instances:" 37 1)"
+  for name in "${keymap[@]}"; do
     echo -e "$((num++))) $name"
   done
-
-  if [[ $1 = + ]]; then
-    echo "Select the one to connect to: "
-  elif [[ -z $1 ]]; then
-    >&2 echo Impl.error: wrong positional argument
-  fi
+  [[ -n $prompt ]] && echo "$prompt"
 }
 
 function pk::pick() {
@@ -103,11 +121,11 @@ function pk::pick() {
       return 0
     else
       >&2 echo "No option found with the #'$choice'"
-      >&2 peek
+      >&2 peek '+'
       return 1
     fi
   }
-  read -rp "$(peek +)"
+  read -rp "$(peek '?')"
   if [[ -n $REPLY && -n ${names[$REPLY - 1]} ]]; then
     echo "${_INSTANCE_MAP[${names[$REPLY - 1]}]}"
     return 0
@@ -120,5 +138,7 @@ function pk::pick() {
 function pk::peek() {
   declare -A _INSTANCE_MAP
   create_instance_map || return 1
-  peek
+  peek '+'
 }
+
+# pk::peek
