@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 # set -eo pipefail
-source "$(dirname "$0")/aws-login.sh"
-source "$(dirname "$0")/new_pick.sh"
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/aws-login.sh"
+source "$LIB_DIR/pick.sh"
 
 _help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
@@ -39,7 +40,6 @@ function connect() {
     return 1
   }
   eval set -- "$params"
-  echo $params
 
   declare -a _ADD_IP4_TO_SG_OPTS
   local exec_cmd detach=false _SKIP_CHECKS=false
@@ -87,7 +87,6 @@ function connect() {
     >&2 echo "'connect' does not accept any positional arguments"
     return 1
   }
-  echo "<$_SKIP_CHECKS>"
   local _LOGINSTR
   EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   [[ -z $EC2_CFG_FILE ]] && EC2_CFG_FILE=$(pk::pick) || return 1

@@ -1,4 +1,6 @@
-source "$(dirname "$0")/new_utils.sh"
+#!/usr/bin/env bash
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/utils.sh"
 
 function _check_columns() {
   local columns=(
@@ -33,7 +35,7 @@ function init() {
 
       local name
       local instance_id=${instance_opts[instance_id]}
-      utils::valid_instance_id_check $instance_id || return 1
+      utils::valid_instance_id_check "$instance_id" || return 1
       name=$(
         aws ec2 describe-instances \
           --instance-ids "$instance_id" \

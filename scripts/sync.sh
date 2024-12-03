@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source "$(dirname $0)/aws-login.sh"
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
   printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"

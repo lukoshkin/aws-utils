@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 ec2() {
-  local _PARENT_DIR
-  _PARENT_DIR="$(readlink -f "$0")"
-  _PARENT_DIR="$(dirname "$_PARENT_DIR")/ec2_utils"
+  local root scripts completions
+  root=$(dirname "$(readlink -f "$0")")
+  completions="$root/completions"
+  scripts="$root/scripts"
 
   case $1 in
   *)
@@ -11,40 +12,40 @@ ec2() {
     ;;&
 
   home)
-    dirname "$_PARENT_DIR"
+    echo "$root"
     ;;
   init)
-    bash "$_PARENT_DIR"/init.sh "$@"
+    bash "$scripts"/init.sh "$@"
     ;;
   pick)
-    bash "$_PARENT_DIR"/pick.sh "$@"
+    bash "$scripts"/pick.sh "$@"
     ;;
   add)
-    bash "$_PARENT_DIR"/add.sh "$@"
+    bash "$scripts"/add.sh "$@"
     ;;
   ls | info)
-    bash "$_PARENT_DIR"/info.sh "$@"
+    bash "$scripts"/info.sh "$@"
     ;;
   connect)
-    bash "$_PARENT_DIR"/connect.sh "$@"
+    bash "$scripts"/connect.sh "$@"
     ;;
   execute)
-    bash "$_PARENT_DIR"/execute.sh "$@"
+    bash "$scripts"/execute.sh "$@"
     ;;
   disconnect)
-    bash "$_PARENT_DIR"/disconnect.sh "$@"
+    bash "$scripts"/disconnect.sh "$@"
     ;;
   scp-file)
-    bash "$_PARENT_DIR"/scp_file.sh "$@"
+    bash "$scripts"/scp_file.sh "$@"
     ;;
   sync)
-    bash "$_PARENT_DIR"/sync.sh "$@"
+    bash "$scripts"/sync.sh "$@"
     ;;
   porforwar)
-    bash "$_PARENT_DIR"/porforwar.sh "$@"
+    bash "$scripts"/porforwar.sh "$@"
     ;;
   clean-up)
-    bash "$_PARENT_DIR"/clean-up.sh "$@"
+    bash "$scripts"/clean-up.sh "$@"
     ;;
   install-completions)
     [[ $# -gt 1 ]] && {
@@ -56,8 +57,7 @@ ec2() {
       return 1
     }
 
-    _PARENT_DIR="$(dirname "$_PARENT_DIR")/completions"
-    local completions install_path
+    local compl_path install_path
     if [[ ${SHELL##*/} == "zsh" ]]; then
       [[ -n $XDG_CONFIG_HOME ]] && {
         ZDOTDIR=${ZDOTDIR:-$XDG_CONFIG_HOME/zsh}
@@ -65,9 +65,9 @@ ec2() {
         ZDOTDIR=${ZDOTDIR:-~}
       }
       install_path="${ZDOTDIR}/.zshrc"
-      completions="$_PARENT_DIR/ec2-compl.zsh"
+      compl_path="$completions/ec2-compl.zsh"
     elif [[ ${SHELL##*/} == "bash" ]]; then
-      completions="$_PARENT_DIR/ec2-compl.bash"
+      compl_path="$completions/ec2-compl.bash"
       install_path=${1:-~/.bashrc}
     else
       echo "Unsupported shell"
@@ -76,7 +76,7 @@ ec2() {
     if grep -q "ec2-compl" "$install_path"; then
       echo "Completions are already installed."
     else
-      echo "source \"$completions\"" >>"$install_path"
+      echo "source \"$compl_path\"" >>"$install_path"
       echo "Installed completions to $install_path!"
     fi
     ;;

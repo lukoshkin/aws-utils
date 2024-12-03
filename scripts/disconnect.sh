@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source "$(dirname $0)/utils.sh"
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/utils.sh"
 
 disconnect() {
   local login_and_host
@@ -15,10 +16,8 @@ disconnect() {
       utils::get_cfg_entry instance_id "$HOME_LOGIN_CFG"
     )"
   fi
-  if [[ -f $TMP_LOGIN_CFG ]]; then
+  if $some_opts_provided; then
     bash "$(dirname $0)/clean-up.sh"
-    ## Remove when switch to per-instance tmp config
-    # && rm "$TMP_LOGIN_CFG"
   fi
 }
 

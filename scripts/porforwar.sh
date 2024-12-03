@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source "$(dirname $0)/aws-login.sh"
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/aws-login.sh"
 
 forward_port() {
   declare -a aws_ssh_opts
