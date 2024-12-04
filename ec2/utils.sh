@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EC2_FOLDER=$(dirname "$(dirname "$(realpath "$0")")")
+EC2_FOLDER=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
 EC2_CFG_FOLDER=$EC2_FOLDER/ec2_login_opts
 EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
 EC2_CFG_FILE=

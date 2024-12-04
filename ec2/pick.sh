@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
-source "$(dirname "$0")/new_utils.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
+
+function is_number() {
+  [[ $1 =~ ^[0-9]+$ ]] || {
+    >&2 echo "Invalid input: $1"
+    return 1
+  }
+}
 
 function create_instance_map() {
   local instances
@@ -24,7 +31,7 @@ function create_instance_map() {
     conn=$(utils::get_cfg_entry connection)
     state=$(utils::get_cfg_entry state)
     [[ $EC2_CFG_FILE = "$current_cfg" ]] && {
-      selected=9
+      selected=1
       opt="* "
     }
     local _TEXT_ATTR=$selected
@@ -46,7 +53,7 @@ function create_instance_map() {
 }
 
 function enrich_instance_map() {
-  echo "Updating the context.."
+  echo "Scrapping the latest data.."
   for name in "${!_INSTANCE_MAP[@]}"; do
     local instance_id state
     instance_id=$(cut -d% -f3 <<<"${_INSTANCE_MAP[$name]}") || {
@@ -99,13 +106,16 @@ function peek() {
   for name in "${keymap[@]}"; do
     echo -e "$((num++))) $name"
   done
-  [[ -n $prompt ]] && echo "$prompt"
+  if [[ -n $prompt ]]; then
+    echo "$prompt"
+  fi
 }
 
 function pk::pick() {
   local _choice choice=$1
   [[ -n $choice && $choice != = ]] && {
     choice=${choice#=}
+    is_number "$choice" || return 1
     local _choice=$choice
     [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
   }
@@ -126,6 +136,7 @@ function pk::pick() {
     fi
   }
   read -rp "$(peek '?')"
+  is_number "$REPLY" || return 1
   if [[ -n $REPLY && -n ${names[$REPLY - 1]} ]]; then
     echo "${_INSTANCE_MAP[${names[$REPLY - 1]}]}"
     return 0
@@ -140,5 +151,3 @@ function pk::peek() {
   create_instance_map || return 1
   peek '+'
 }
-
-# pk::peek

@@ -1,2 +1,2 @@
 ## Common among all scripts settings
-LIB_DIR=$(dirname "$(dirname "$0")")/ec2
+LIB_DIR=$(dirname "$(dirname "${BASH_SOURCE[0]}")")/ec2

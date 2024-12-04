@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# set -eo pipefail
+set -eo pipefail
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 source "$LIB_DIR/pick.sh"
@@ -45,21 +45,16 @@ function connect() {
   local exec_cmd detach=false _SKIP_CHECKS=false
   while [[ $1 != -- ]]; do
     case $1 in
-    *) shift ;;&
     -h | --help)
       _help_msg
       return
       ;;
-    -s | --skip-checks)
-      _SKIP_CHECKS=true
-      ;;
+    -s | --skip-checks) _SKIP_CHECKS=true ;;&
     -p | --pick-instance)
       EC2_CFG_FILE=$(pk::pick "$2") || return 1
       shift
-      ;;
-    -d | --detach)
-      detach=true
-      ;;
+      ;;&
+    -d | --detach) detach=true ;;&
     -e | --execute)
       ## TODO: make a separate subcommand for it. Pass option to make more
       ## stable server-client connections with 'ClientAliveInterval' and
@@ -67,18 +62,15 @@ function connect() {
       detach=true
       exec_cmd="$2"
       shift
-      ;;
+      ;;&
     -t | --ip | --revoke-time)
       _ADD_IP4_TO_SG_OPTS+=("$1" "$2")
       shift
-      ;;
+      ;;&
     -n | --non-interactive)
       _ADD_IP4_TO_SG_OPTS+=("$1")
-      ;;
-    *)
-      echo Impl.error: param parsing failed
-      return 1
-      ;;
+      ;;&
+    *) shift ;;
     esac
   done
 
@@ -89,7 +81,7 @@ function connect() {
   }
   local _LOGINSTR
   EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
-  [[ -z $EC2_CFG_FILE ]] && EC2_CFG_FILE=$(pk::pick) || return 1
+  [[ -z $EC2_CFG_FILE ]] && { EC2_CFG_FILE=$(pk::pick) || return 1; }
   login::sanity_checks_and_setup_finalization || return 1
 
   entrypoint=$(utils::get_cfg_entry entrypoint)
@@ -99,7 +91,8 @@ function connect() {
 
   echo '---'
   echo "Connecting to <$_LOGINSTR>"
-  echo "The selected instance name: $(cut -d% -f2 <<<"$EC2_CFG_FILE")"
+  echo -n "The selected instance name: "
+  echo -e "$(utils::c "$(cut -d% -f2 <<<"$EC2_CFG_FILE")" 37 1)"
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
   echo '---'
@@ -135,9 +128,9 @@ function connect() {
     ssh -A "${aws_ssh_opts[@]}" "$_LOGINSTR" \
       "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
     _update_connection_status
-    echo "---"
+    echo -e "$(utils::c '***' 35)"
   fi
-  echo -e "Detaching.."
+  echo "Detaching.."
 }
 
 connect "$@"

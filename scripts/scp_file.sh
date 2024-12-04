@@ -152,7 +152,10 @@ function scp_file() {
     help_msg
     return 1
   }
+  # shellcheck disable=SC2034
+  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   utils::maybe_set_login_string
+
   declare -a _AWS_SSH_OPTS
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 

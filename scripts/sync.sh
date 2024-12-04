@@ -76,7 +76,12 @@ function sync_remote_with_client() {
     return 1
   }
 
+  # shellcheck disable=SC2034
+  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   utils::maybe_set_login_string
+
+  declare -a aws_ssh_opts
+  aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
   declare -a rest_opts_and_args=(
     -az
     --progress
@@ -85,9 +90,6 @@ function sync_remote_with_client() {
     "${LOGINSTR}:$dst"
   )
   $no_update && unset 'rest_opts_and_args[2]'
-
-  declare -a aws_ssh_opts
-  aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Since we run without `eval`, `dry_run` can't be empty.
   ## Or will be treated as an empty argument otherwise

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source "$(dirname "$0")/new_utils.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 _ECHO() {
-  echo -e "\033[0;35m$1\033[0m"
+  echo -e "$(utils::c "$1" 35)"
 }
 
 function infer_login_str() {
