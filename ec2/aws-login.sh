@@ -1,10 +1,5 @@
 #!/bin/bash
-
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
-
-_ECHO() {
-  echo -e "$(utils::c "$1" 35)"
-}
 
 function infer_login_str() {
   local check_in_str=$1
@@ -38,8 +33,8 @@ function login::sanity_checks_and_setup_finalization() {
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
   [[ -z $instance_id ]] && {
-    _ECHO "Hmm, curious.. There is no 'instance_id' in $EC2_CFG_FILE"
-    _ECHO "Try to mend this with 'ec2 init' call."
+    utils::info "Hmm, curious.. There is no 'instance_id' in $EC2_CFG_FILE"
+    utils::info "Try to mend this with 'ec2 init' call."
     return 1
   }
   local ec2_state
@@ -50,18 +45,18 @@ function login::sanity_checks_and_setup_finalization() {
       --output text
   )
   if ! [[ $ec2_state =~ (stopped|running) ]]; then
-    _ECHO "The machine is currently in a transient state: '$ec2_state'"
-    _ECHO 'Re-run the command in a few seconds'
-    _ECHO 'Use the following command to check the status manually:'
-    _ECHO 'aws ec2 describe-instances \'
-    _ECHO "  --instance-ids $instance_id \\"
-    _ECHO '  --query "Reservations[*].Instances[*].State.Name" \'
-    _ECHO '  --output text'
+    utils::info "The machine is currently in a transient state: '$ec2_state'"
+    utils::info 'Re-run the command in a few seconds'
+    utils::info 'Use the following command to check the status manually:'
+    utils::info 'aws ec2 describe-instances \'
+    utils::info "  --instance-ids $instance_id \\"
+    utils::info '  --query "Reservations[*].Instances[*].State.Name" \'
+    utils::info '  --output text'
     return 1
   fi
   if [[ ${#_ADD_IP4_TO_SG_OPTS[@]} -gt 0 ]]; then
     echo "Managing SSH inbound rules with '${_ADD_IP4_TO_SG_OPTS[*]}'"
-    login::clean_up
+    login::clean_up "$instance_id"
   fi
   local ip4 # client's IP4
   ip4=$(utils::get_cfg_entry revoke-rule-uri)
@@ -204,8 +199,9 @@ function login::ec2_public_ip_from_instance_id() {
 }
 
 function login::clean_up() {
+  local instance_id=$1
   [[ -z $instance_id ]] && {
-    >&2 echo 'Impl.error: No instance id found.'
+    >&2 echo 'Impl.error: No instance id provided.'
     return 1
   }
   local revoke_rule_uri
@@ -215,8 +211,6 @@ function login::clean_up() {
     echo "No rules found."
     return
   }
-  local instance_id
-  instance_id=$(utils::get_cfg_entry instance_id)
   local iid ip4 sg_id
   local found_any=false
   if [[ -n $revoke_rule_uri ]]; then

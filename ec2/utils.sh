@@ -13,6 +13,10 @@ _cfg() {
   echo "$EC2_CFG_FOLDER/${1:-$EC2_CFG_FILE}"
 }
 
+utils::info() {
+  echo -e "$(utils::c "$1" 35)"
+}
+
 utils::unique_file_by_affix() {
   local folder=${3:-$EC2_CFG_FOLDER}
   folder="${folder%/}"

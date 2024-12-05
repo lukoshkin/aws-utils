@@ -19,8 +19,8 @@ function help_msg() {
 }
 
 function sync_remote_with_client() {
-  local long_opts="execute:,all-files,client-always-right,dry-run,help"
-  local short_opts="e:,a,n,h"
+  local long_opts="help,execute:,all-files,client-always-right,dry-run"
+  local short_opts="h,e:,a,n"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -43,24 +43,12 @@ function sync_remote_with_client() {
       ;;
     -e | --execute)
       sync_command=${2#=}
-      shift 2
-      ;;
-    -a | --all-files)
-      all_files=true
       shift
-      ;;
-    --client-always-right)
-      no_update=true
-      shift
-      ;;
-    -n | --dry-run)
-      dry_run=-nv
-      shift
-      ;;
-    *)
-      echo Impl.error
-      return 1
-      ;;
+      ;;&
+    --client-always-right) no_update=true ;;&
+    -a | --all-files) all_files=true ;;&
+    -n | --dry-run) dry_run=-nv ;;&
+    *) shift ;;
     esac
   done
 

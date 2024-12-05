@@ -4,6 +4,10 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/utils.sh"
 
 disconnect() {
+  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
+  [[ -z $EC2_CFG_FILE ]] && { EC2_CFG_FILE=$(pk::pick) || return 1; }
+  utils::maybe_set_login_string
+
   local login_and_host
   login_and_host=$(utils::get_cfg_entry logstr)
   if [[ -n $login_and_host ]]; then
@@ -16,7 +20,7 @@ disconnect() {
       utils::get_cfg_entry instance_id "$HOME_LOGIN_CFG"
     )"
   fi
-  if $some_opts_provided; then
+  if true; then
     bash "$(dirname $0)/clean-up.sh"
   fi
 }

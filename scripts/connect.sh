@@ -128,7 +128,7 @@ function connect() {
     ssh -A "${aws_ssh_opts[@]}" "$_LOGINSTR" \
       "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
     _update_connection_status
-    echo -e "$(utils::c '***' 35)"
+    utils::info '***'
   fi
   echo "Detaching.."
 }

@@ -5,15 +5,19 @@ source "$LIB_DIR/aws-login.sh"
 declare -A _CHECKS
 
 function help_msg() {
-  printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
-  echo "Copy file from SRC to DST."
-  echo 'To copy from local to host (EC2 instance), prefix with `UPLOAD= `'
+  echo "Usage: $0 [OPTIONS] SRC [DST]"
+  echo "Transfer files and archives between the client and a host."
+  echo "To copy from local to host (EC2 instance), use '-u' flag"
+  echo "or prefix the whole command with 'UPLOAD=':"
+  echo
+  echo "UPLOAD= ec2 scp-file file_on_client file_on_host"
   echo
   echo "If DST is not provided, it defaults to SRC"
   echo "One can configure defaults using $HOME_LOGIN_CFG"
   echo
   echo "Options:"
   echo "  -h, --help        Show this help message and exit"
+  echo "  -u, --upload      Reverse the file transfer: upload from local to host"
   echo "  -t, --tar         Tar the source folder before copying"
   echo "  -z, --gzip        Gzip the tared folder"
 }
@@ -108,8 +112,8 @@ function check_destination() {
 }
 
 function scp_file() {
-  local long_opts="tar,gzip,help"
-  local short_opts="t,z,h"
+  local long_opts="help,upload,tar,gzip"
+  local short_opts="h,u,t,z"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -125,19 +129,10 @@ function scp_file() {
       help_msg
       return
       ;;
-    -t | --tar)
-      via_tar=any
-      shift
-      ;;
-    -z | --gzip)
-      gz=.gz
-      shift
-      ;;
-
-    *)
-      echo Impl.error
-      return 1
-      ;;
+    -u | --upload) UPLOAD=any ;;&
+    -t | --tar) via_tar=any ;;&
+    -z | --gzip) gz=.gz ;;&
+    *) shift ;;
     esac
   done
 
