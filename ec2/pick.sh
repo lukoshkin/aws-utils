@@ -79,6 +79,8 @@ function enrich_instance_map() {
     esac
     name+=" $state_sign"
     _ENRICHED_INSTANCE_MAP[$name]=${_INSTANCE_MAP[$name]}
+    _KEYMAP+=("$name") # associative arrays are not ordered
+    ## That is why we need _KEYMAP - to output options in the same order
   done
 }
 
@@ -94,11 +96,12 @@ function peek() {
     keymap=("${!_INSTANCE_MAP[@]}")
     ;;&
   *\+*)
+    declare -a _KEYMAP
     declare -A _ENRICHED_INSTANCE_MAP
     enrich_instance_map
-    keymap=("${!_ENRICHED_INSTANCE_MAP[@]}")
+    keymap=("${_KEYMAP[@]}")
     ;;&
-  *\?*) prompt="Select the one to connect to: " ;;
+  *\?*) prompt="Select the one to continue with: " ;;
   esac
 
   local num=1
