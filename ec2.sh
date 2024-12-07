@@ -45,7 +45,7 @@ ec2() {
     bash "$scripts"/porforwar.sh "$@"
     ;;
   clean-up)
-    bash "$scripts"/clean-up.sh "$@" # TODO
+    bash "$scripts"/clean-up.sh "$@"
     ;;
   install-completions)
     [[ $# -gt 1 ]] && {

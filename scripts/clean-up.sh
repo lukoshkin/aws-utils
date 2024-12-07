@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
-
 source "$(dirname "$0")/dot.sh"
-source "$REPO_DIR/brave_utils.sh"
 source "$LIB_DIR/aws-login.sh"
-source "$LIB_DIR/pick.sh"
+
+help_msg() {
+  echo "Usage: $0 [-p=<profile_num>|--pick=<profile_num>]"
+  echo "Undo changes to AWS resources made by ec2."
+}
 
 function clean_up() {
-  declare -a _TARGET_OPTIONS
-  declare -a _OTHER_OPTIONS
-  brave::parse_one_option true -p --pick -- "$@" || return 1
-  [[ ${#_OTHER_OPTIONS[@]} -gt 0 ]] && eval set "${_OTHER_OPTIONS[*]}"
-
-  if [[ ${#_TARGET_OPTIONS[@]} -gt 0 ]]; then
-    pk::pick "${_TARGET_OPTIONS[1]}"
-  fi
-
-  # shellcheck disable=SC2034
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
-
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return 1
+  [[ ${#_OTHER_ARGS[@]} -gt 0 ]] && {
+    >&2 echo "Currently, no other than --pick arguments are supported."
+    help_msg
+    return 1
+  }
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
   login::clean_up "$instance_id"

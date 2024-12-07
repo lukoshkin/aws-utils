@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
-source "$LIB_DIR/utils.sh"
 
 function _check_columns() {
   local columns=(

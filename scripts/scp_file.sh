@@ -13,7 +13,7 @@ function help_msg() {
   echo "UPLOAD= ec2 scp-file file_on_client file_on_host"
   echo
   echo "If DST is not provided, it defaults to SRC"
-  echo "One can configure defaults using $HOME_LOGIN_CFG"
+  echo "One can configure defaults using $EC2_CFG_MAIN"
   echo
   echo "Options:"
   echo "  -h, --help        Show this help message and exit"
@@ -92,7 +92,7 @@ function check_destination() {
   if eval "${_CHECKS["[[ -f $dst ]]"]}"; then
     eval "${_CHECKS["[[ $dst = /tmp/* ]]"]}" && {
       local overwrite
-      overwrite=$(utils::get_cfg_entry overwrite_in_tmp "$HOME_LOGIN_CFG")
+      overwrite=$(utils::get_cfg_entry overwrite_in_tmp "$EC2_CFG_MAIN")
       if [[ $overwrite = true ]]; then
         echo "Overwriting destination file: $display_dst"
         echo "There might be problems because of the existing file permissions"
@@ -139,7 +139,7 @@ function scp_file() {
   shift
   local src=$1
   local dst=${2:-$(
-    utils::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry scp_default_dst "$EC2_CFG_MAIN"
   )}
   local dst=${dst:-$src}
   [[ -z $src ]] && {

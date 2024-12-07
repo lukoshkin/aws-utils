@@ -1,28 +1,72 @@
 #!/usr/bin/env bash
-
 source "$(dirname "$0")/dot.sh"
-source "$LIB_DIR/utils.sh"
+source "$LIB_DIR/aws-login.sh"
 
-disconnect() {
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
-  [[ -z $EC2_CFG_FILE ]] && { EC2_CFG_FILE=$(pk::pick) || return 1; }
-  utils::maybe_set_login_string
+function help_msg() {
+  echo "Usage: $0 [OPTIONS]"
+  echo "Disconnect from an EC2 instance."
+  echo
+  echo "Options:"
+  echo "  -h, --help                Show this help message and exit"
+  echo "  -a, --via-exec            Disconnect via executing 'sudo shutdown -h now' on the instance"
+  echo "  -p=<NUM>, --pick=<NUM>    Pick an instance to disconnect from"
+  echo "  --no-cleanup              Skip the cleanup step"
+}
 
-  local login_and_host
-  login_and_host=$(utils::get_cfg_entry logstr)
-  if [[ -n $login_and_host ]]; then
+function disconnect() {
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return 1
+  [[ ${#_OTHER_ARGS[@]} -gt 0 ]] && eval set "${_OTHER_ARGS[*]}"
+
+  local long_opts="help,no-cleanup,via-exec"
+  local short_opts="h,a"
+  local params
+  params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
+    echo Aborting..
+    return 1
+  }
+  eval set -- "$params"
+
+  local no_cleanup=false via_exec=false
+  while [[ $1 != -- ]]; do
+    case $1 in
+    -h | --help)
+      help_msg
+      return
+      ;;
+    -a | --via-exec) via_exec=true ;;&
+    --no-cleanup) no_cleanup=true ;;&
+    *) shift ;;
+    esac
+  done
+
+  shift
+  [[ -n $1 ]] && {
+    echo "Unknown argument: $1"
+    help_msg
+    return 1
+  }
+
+  local instance_id
+  instance_id=$(utils::get_cfg_entry instance_id)
+
+  if $via_exec; then
+    local login_and_host
+    login_and_host=$(utils::get_cfg_entry logstr)
+    [[ -z $login_and_host ]] && {
+      echo "No login string found. Exiting.."
+      return 1
+    }
     declare -a aws_ssh_opts
-    echo "Shutting down the instance on $login_and_host"
     aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
     ssh "${aws_ssh_opts[@]}" "$login_and_host" "sudo shutdown -h now"
   else
-    aws ec2 stop-instances --instance-ids "$(
-      utils::get_cfg_entry instance_id "$HOME_LOGIN_CFG"
-    )"
+    aws ec2 stop-instances --instance-ids "$instance_id"
   fi
-  if true; then
-    bash "$(dirname $0)/clean-up.sh"
+
+  if ! $no_cleanup; then
+    login::clean_up "$instance_id"
   fi
 }
 
-disconnect
+disconnect "$@"

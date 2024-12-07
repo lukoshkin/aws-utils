@@ -8,7 +8,7 @@ function help_msg() {
   echo "Sync DST folder on the host with the SRC folder on the client"
   echo
   echo "If DST is not provided, it defaults to SRC"
-  echo "One can configure defaults using $HOME_LOGIN_CFG"
+  echo "One can configure defaults using $EC2_CFG_MAIN"
   echo
   echo "Options:"
   echo "  -h, --help                   Show this help message and exit"
@@ -32,7 +32,7 @@ function sync_remote_with_client() {
   local sync_command all_files=false no_update=false dry_run=-v
   sync_command=$(utils::get_cfg_entry sync_command)
   sync_command=${sync_command:-$(
-    utils::get_cfg_entry sync_command "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry sync_command "$EC2_CFG_MAIN"
   )}
 
   while [[ $1 != -- ]]; do

@@ -3,7 +3,6 @@
 set -eo pipefail
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
-source "$LIB_DIR/pick.sh"
 
 _help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
@@ -17,7 +16,7 @@ _help_msg() {
   echo '  [beta]'
   echo "  --ip IP                             Manually specify the IP for the SSH inbound rule to add"
   echo "  -t TIME, --revoke-time TIME         Specify the time in seconds to revoke the added SSH inbound rule"
-  echo "  -p=[NUM], --pick-instance=[NUM]     Pick the instance to connect to"
+  echo "  -p=<NUM>, --pick=<NUM>              Pick the instance to connect to"
   echo "  -n, --non-interactive               A security group auto-select (may be extended later)"
 }
 
@@ -31,7 +30,7 @@ _update_connection_status() {
 }
 
 function connect() {
-  local long_opts="non-interactive,skip-checks,pick-instance:,execute:,detach,ip:,revoke-time:,help"
+  local long_opts="non-interactive,skip-checks,pick:,execute:,detach,ip:,revoke-time:,help"
   local short_opts="n,s,p:,e:,d,t:,h"
   local params
 
@@ -49,11 +48,11 @@ function connect() {
       _help_msg
       return
       ;;
-    -s | --skip-checks) _SKIP_CHECKS=true ;;&
-    -p | --pick-instance)
+    -p | --pick)
       EC2_CFG_FILE=$(pk::pick "$2") || return 1
       shift
       ;;&
+    -s | --skip-checks) _SKIP_CHECKS=true ;;&
     -d | --detach) detach=true ;;&
     -e | --execute)
       ## TODO: make a separate subcommand for it. Pass option to make more

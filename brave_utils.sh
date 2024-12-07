@@ -81,7 +81,7 @@ brave::parse_one_option() {
                     return 1
                 fi
                 if [[ -n ${left1#-} ]]; then
-                    _OTHER_OPTIONS+=("$left1")
+                    _OTHER_ARGS+=("$left1")
                 fi
                 if [[ -n $right || $arg =~ = ]]; then
                     _TARGET_OPTIONS+=("$right")
@@ -97,7 +97,7 @@ brave::parse_one_option() {
                 _TARGET_OPTIONS+=("$arg")
             fi
         else
-            _OTHER_OPTIONS+=("$arg")
+            _OTHER_ARGS+=("$arg")
         fi
         ((i++))
     done
