@@ -53,6 +53,8 @@ function init() {
           echo "then call 'init' command again. You can also remove it"
           echo "if no longer needed."
         fi
+        >&2 utils::info No instance on AWS side with ID: "$instance_id"
+        # TODO: switch to utils::warn
         continue
       }
 
@@ -73,6 +75,10 @@ function init() {
       echo "✅ $name"
     done
   } < <(utils::get_cfg_entry instance_opts | sed '$d')
+  utils::info "NOTE that 'init' command does not create configuration files"
+  utils::info "from scratch. So, to abolish some options, one may need to"
+  utils::info "remove the files manually before the call or review their"
+  utils::info "content after it adjusting as needed."
 }
 
 init "$@"

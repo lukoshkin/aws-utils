@@ -72,7 +72,6 @@ brave::parse_one_option() {
                     fi
                     continue
                 fi
-                local left left1 left2 right
                 IFS='=' read -r left right <<<"$arg"
                 IFS=${short_target#-} read -r left1 left2 <<<"$left"
                 if [[ -n $left2 ]]; then

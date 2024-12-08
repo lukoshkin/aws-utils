@@ -211,7 +211,6 @@ function login::clean_up() {
     echo "No rules found."
     return
   }
-  local iid ip4 sg_id
   local found_any=false
   if [[ -n $revoke_rule_uri ]]; then
     while IFS=% read -r iid ip4 sg_id; do

@@ -1,43 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env bash
+source "$(dirname "$0")/dot.sh"
 
-set_up_instance() {
-  if [[ $_LOGINSTR = $(infer_login_str "$user_input") ]]; then
-    ## Likely we are OK since we previously connected to it already.
-    echo "Using the cached IP address.."
-    return
-  elif [[ -z $sshkey ]]; then
-    _ECHO "Your setup does not allow to connect to unknown hosts. At least,"
-    _ECHO "specify the SSH key in your main config ($EC2_CFG_MAIN). Even"
-    _ECHO "better would be to select the instance to connect to among those"
-    _ECHO "listed in the main config under 'instance_opts:-' key"
+function register_instance() {
+  IFS='|' read -r -a columns < <(utils::get_cfg_entry instance_opts | head -1)
+  ## TODO: check if the content of the config table before adding an instance
+  ## It may be already there
+  declare -A row
+
+  for ((pos = 1; pos <= ${#@}; pos++)); do
+    if ! [[ ${!pos} =~ = ]]; then
+      row[${columns[$pos - 1]}]=${!pos}
+      continue
+    fi
+    IFS='=' read -r left right <<<"${!pos}"
+    if [[ -z $left || -z $right ]]; then
+      >&2 echo "Invalid argument: ${!pos}"
+      return 1
+    fi
+    row[$left]=$right
+  done
+
+  if [[ -z ${row[instance_id]} ]]; then
+    >&2 echo "Instance ID is required"
     return 1
-  else
-    msg="NOTE: You connect to 'unknown' host (that is, not listed under the"
-    msg+="\n'instance_opts' key in the main config file). Make sure to check"
-    msg+='\nthe security group of the instance you are connecting to and add'
-    msg+='\nthe IP address to the inbound rules manually if need be.'
-    local instance_ids
-    instance_ids=$(utils::get_cfg_entry instance_ids:- "$EC2_CFG_MAIN")
-    [[ -z $instance_ids ]] && {
-      _ECHO "$msg"
-      _LOGINSTR=$(infer_login_str "$user_input")
-      return
-    }
-    local found_iid
-    while IFS='=' read -r iid pem_file; do
-      [[ $pem_file = "$sshkey" ]] && found_iid=$iid
-      break
-    done <<<"$instance_ids"
-    if [[ -z $found_iid ]]; then
-      _ECHO "$msg"
-      _LOGINSTR=$(infer_login_str "$user_input")
-      return
-    fi
-    local ip4
-    _LOGINSTR=$(infer_login_str "$user_input")
-    ip4=$(login::ec2_public_ip_from_instance_id "$instance_id")
-    if [[ $_LOGINSTR != $(infer_login_str "$ip4") ]]; then
-      _ECHO "$msg"
-    fi
   fi
+  if [[ -z ${row[sshkey]} ]]; then
+    declare -a keys
+    keys=(~/.ssh/*.pem)
+    if [[ ${#keys[@]} -eq 0 ]]; then
+      >&2 echo "Specify SSH key to use"
+      return 1
+    fi
+    PS3="Select the SSH key to use: "
+    row[sshkey]=$(utils::select_option "${keys[@]}") || return 1
+  fi
+
+  local line
+  row[sshkey]=${row[sshkey]//\//\\/}
+  for col in "${columns[@]}"; do
+    local value=${row[$col]}
+    [[ -n $value ]] && line+="$value|"
+  done
+  # shellcheck disable=SC2034
+  EC2_CFG_FILE= # just to make sure
+  line=${line%|}
+  utils::set_cfg_entry instance_opts:- "$line"
+  line=${line//\\/}
+  echo -e "$(utils::info "Successfully added the line:")" "$line"
+  utils::info "Now you can run 'ec2 init'"
 }
+
+register_instance "$@"

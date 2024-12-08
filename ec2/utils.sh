@@ -79,14 +79,14 @@ utils::set_cfg_entry() {
 
   if [[ -f $cfg ]] && grep -q "^${key%:-}:" "$cfg"; then
     [[ $# -eq 1 ]] && {
-      if [[ $key = *:- ]]; then
+      if [[ $key =~ :-$ ]]; then
         sed -ri "/^$key/,/^$/d" "$cfg"
       else
         sed -ri "/^$key:\(?!-\)/d" "$cfg"
       fi
       return
     }
-    if [[ $key = *:- ]]; then
+    if [[ $key =~ :-$ ]]; then
       sed -ri "/^$key/,/^$/ { /^$/ {s/^/$value\n/; } }" "$cfg"
     else
       sed -ri "s;^$key: .*;$key: $value;" "$cfg"
