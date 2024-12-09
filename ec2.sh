@@ -21,7 +21,7 @@ ec2() {
     bash "$scripts"/pick.sh "$@"
     ;;
   add)
-    bash "$scripts"/add.sh "$@" # TODO
+    bash "$scripts"/add.sh "$@" # TODO: test more
     ;;
   ls | info)
     bash "$scripts"/info.sh "$@"
@@ -30,7 +30,7 @@ ec2() {
     bash "$scripts"/connect.sh "$@"
     ;;
   execute)
-    bash "$scripts"/execute.sh "$@" # TODO
+    bash "$scripts"/execute.sh "$@" # TODO: test more
     ;;
   disconnect)
     bash "$scripts"/disconnect.sh "$@"
@@ -45,7 +45,7 @@ ec2() {
     bash "$scripts"/porforwar.sh "$@"
     ;;
   clean-up)
-    bash "$scripts"/clean-up.sh "$@"
+    bash "$scripts"/clean-up.sh "$@" # TODO: test more
     ;;
   install-completions)
     [[ $# -gt 1 ]] && {

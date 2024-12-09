@@ -16,7 +16,7 @@ function help_msg() {
 function disconnect() {
   declare -a _OTHER_ARGS
   dot::light_pick "$@" || return 1
-  [[ ${#_OTHER_ARGS[@]} -gt 0 ]] && eval set "${_OTHER_ARGS[*]}"
+  eval set -- "${_OTHER_ARGS[*]}"
 
   local long_opts="help,no-cleanup,via-exec"
   local short_opts="h,a"
@@ -51,15 +51,11 @@ function disconnect() {
   instance_id=$(utils::get_cfg_entry instance_id)
 
   if $via_exec; then
-    local login_and_host
-    login_and_host=$(utils::get_cfg_entry logstr)
-    [[ -z $login_and_host ]] && {
-      echo "No login string found. Exiting.."
-      return 1
-    }
     declare -a aws_ssh_opts
     aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
-    ssh "${aws_ssh_opts[@]}" "$login_and_host" "sudo shutdown -h now"
+
+    utils::maybe_set_login_string
+    ssh "${aws_ssh_opts[@]}" "$LOGINSTR" "sudo shutdown -h now"
   else
     aws ec2 stop-instances --instance-ids "$instance_id"
   fi

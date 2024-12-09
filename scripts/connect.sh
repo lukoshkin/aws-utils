@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-
-set -eo pipefail
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
@@ -23,9 +21,10 @@ _help_msg() {
 _update_connection_status() {
   if [[ $? -eq 0 ]]; then
     utils::set_cfg_entry connection active
-    utils::set_cfg_entry logstr "$_LOGINSTR"
+    utils::set_cfg_entry logstr "$LOGINSTR"
   else
     utils::set_cfg_entry connection broken
+    utils::set_cfg_entry logstr
   fi
 }
 
@@ -78,7 +77,6 @@ function connect() {
     >&2 echo "'connect' does not accept any positional arguments"
     return 1
   }
-  local _LOGINSTR
   EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   [[ -z $EC2_CFG_FILE ]] && { EC2_CFG_FILE=$(pk::pick) || return 1; }
   login::sanity_checks_and_setup_finalization || return 1
@@ -89,7 +87,7 @@ function connect() {
   workdir=$(utils::strip_quotes "${workdir:-'~'}")
 
   echo '---'
-  echo "Connecting to <$_LOGINSTR>"
+  echo "Connecting to <$LOGINSTR>" # defined in login::sanity_checks_and_setup_finalization
   echo -n "The selected instance name: "
   echo -e "$(utils::c "$(cut -d% -f2 <<<"$EC2_CFG_FILE")" 37 1)"
   echo "Working directory is '$workdir'"
@@ -101,9 +99,14 @@ function connect() {
   declare -a aws_ssh_opts
   aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
+  ## TODO: currently the logstr key is not set untill the session is active
+  ## ec2 connect -> Working on the server -> <Ctrl-d>: only now logstr is set
+  ## Let's create a small file on the host and download it back. If we managed
+  ## to do it, then the connection is 'active'.
+
   if [[ -n $entrypoint && $entrypoint != ':' ]]; then
     timeout "${TIMEOUT:-20}" ssh "${aws_ssh_opts[@]}" \
-      "$_LOGINSTR" "$entrypoint &>>$ec2_log_file" || {
+      "$LOGINSTR" "$entrypoint &>>$ec2_log_file" || {
       echo "(DEBUG: the return status is <$?>)"
       echo Was not able to start the project containers!
       echo -n "Check the network connection or that you typed"
@@ -119,12 +122,12 @@ function connect() {
   if ! $detach; then
     # -A to forward your '.ssh' folder
     # -t to set a working directory and run interactive session from it
-    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$_LOGINSTR" \
+    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$LOGINSTR" \
       "cd $workdir &>>$ec2_log_file; exec \$SHELL"
     _update_connection_status
   elif [[ -n $exec_cmd ]]; then # when provided '-e', detach is always false
     echo "Executing command: <$exec_cmd>"
-    ssh -A "${aws_ssh_opts[@]}" "$_LOGINSTR" \
+    ssh -A "${aws_ssh_opts[@]}" "$LOGINSTR" \
       "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
     _update_connection_status
     utils::info '***'

@@ -6,7 +6,7 @@ EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
 EC2_CFG_FILE=
 
 _cfg() {
-  [[ -z $1 && -z $EC2_CFG_FILE ]] && {
+  [[ -z $1 || $1 = "$EC2_CFG_MAIN" ]] && [[ -z $EC2_CFG_FILE ]] && {
     echo "$EC2_CFG_MAIN"
     return
   }

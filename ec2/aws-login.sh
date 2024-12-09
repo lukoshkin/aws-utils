@@ -22,8 +22,8 @@ function infer_login_str() {
 
 function login::sanity_checks_and_setup_finalization() {
   if ${_SKIP_CHECKS:-false}; then
-    _LOGINSTR=$(utils::get_cfg_entry logstr)
-    [[ -n $_LOGINSTR ]] && {
+    LOGINSTR=$(utils::get_cfg_entry logstr)
+    [[ -n $LOGINSTR ]] && {
       echo "Using the cached login and host string.."
       return
     }
@@ -86,7 +86,7 @@ function login::sanity_checks_and_setup_finalization() {
   fi
   local ip4 # host
   ip4=$(login::ec2_public_ip_from_instance_id "$instance_id")
-  _LOGINSTR=$(infer_login_str "$ip4")
+  LOGINSTR=$(infer_login_str "$ip4")
 }
 
 login::start_ec2_instances() {
