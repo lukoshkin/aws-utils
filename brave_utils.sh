@@ -96,7 +96,7 @@ brave::parse_one_option() {
                 _TARGET_OPTIONS+=("$arg")
             fi
         else
-            _OTHER_ARGS+=("$arg")
+            _OTHER_ARGS+=("'$arg'")
         fi
         ((i++))
     done

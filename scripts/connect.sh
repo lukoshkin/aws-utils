@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
+source "$SCRIPT_DIR/execute.sh"
 
 _help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
@@ -29,8 +30,12 @@ _update_connection_status() {
 }
 
 function connect() {
-  local long_opts="non-interactive,skip-checks,pick:,execute:,detach,ip:,revoke-time:,help"
-  local short_opts="n,s,p:,e:,d,t:,h"
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return 1
+  eval set -- "${_OTHER_ARGS[*]}"
+
+  local long_opts="non-interactive,skip-checks,execute:,detach,ip:,revoke-time:,help"
+  local short_opts="n,s,e:,d,t:,h"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -47,10 +52,6 @@ function connect() {
       _help_msg
       return
       ;;
-    -p | --pick)
-      EC2_CFG_FILE=$(pk::pick "$2") || return 1
-      shift
-      ;;&
     -s | --skip-checks) _SKIP_CHECKS=true ;;&
     -d | --detach) detach=true ;;&
     -e | --execute)
@@ -77,10 +78,7 @@ function connect() {
     >&2 echo "'connect' does not accept any positional arguments"
     return 1
   }
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
-  [[ -z $EC2_CFG_FILE ]] && { EC2_CFG_FILE=$(pk::pick) || return 1; }
   login::sanity_checks_and_setup_finalization || return 1
-
   entrypoint=$(utils::get_cfg_entry entrypoint)
   entrypoint=$(utils::strip_quotes "${entrypoint:-':'}")
   workdir=${WORKDIR:-$(utils::get_cfg_entry workdir)}
@@ -96,19 +94,18 @@ function connect() {
 
   local ec2_log_file
   ec2_log_file=$(utils::ec2_log_file)
-  declare -a aws_ssh_opts
-  aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+  _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
-  ## TODO: currently the logstr key is not set untill the session is active
+  ## TODO: currently the logstr key is not set until the session is active
   ## ec2 connect -> Working on the server -> <Ctrl-d>: only now logstr is set
   ## Let's create a small file on the host and download it back. If we managed
   ## to do it, then the connection is 'active'.
 
   if [[ -n $entrypoint && $entrypoint != ':' ]]; then
-    timeout "${TIMEOUT:-20}" ssh "${aws_ssh_opts[@]}" \
+    timeout "${TIMEOUT:-20}" ssh "${_AWS_SSH_OPTS[@]}" \
       "$LOGINSTR" "$entrypoint &>>$ec2_log_file" || {
       echo "(DEBUG: the return status is <$?>)"
-      echo Was not able to start the project containers!
+      echo Was not able to execute the entrypoint command!
       echo -n "Check the network connection or that you typed"
       echo " in the correct 'login_and_host' string!"
       utils::set_cfg_entry connection broken
@@ -122,15 +119,12 @@ function connect() {
   if ! $detach; then
     # -A to forward your '.ssh' folder
     # -t to set a working directory and run interactive session from it
-    ssh -tA "${aws_ssh_opts[@]}" -o ServerAliveInterval=100 "$LOGINSTR" \
-      "cd $workdir &>>$ec2_log_file; exec \$SHELL"
-    _update_connection_status
+    execute::remote_command \
+      --ssh-opts-string='-tA -o ServerAliveInterval=100' \
+      "$entrypoint" "exec \$SHELL"
   elif [[ -n $exec_cmd ]]; then # when provided '-e', detach is always false
-    echo "Executing command: <$exec_cmd>"
-    ssh -A "${aws_ssh_opts[@]}" "$LOGINSTR" \
-      "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
+    execute_remotely "$exec_cmd"
     _update_connection_status
-    utils::info '***'
   fi
   echo "Detaching.."
 }

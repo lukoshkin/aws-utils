@@ -1,6 +1,7 @@
 #!/bin/bash
 ## Common among all scripts settings
 REPO_DIR=$(dirname "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$REPO_DIR/scripts"
 LIB_DIR="$REPO_DIR/ec2"
 source "$REPO_DIR/brave_utils.sh"
 source "$LIB_DIR/pick.sh"

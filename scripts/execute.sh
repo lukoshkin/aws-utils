@@ -15,12 +15,12 @@ function help_msg() {
   echo "  -v                            Verbose mode"
 }
 
-function execute_remotely() {
+function execute::remote_command() {
   declare -a _OTHER_ARGS
   dot::light_pick "$@" || return 1
   eval set -- "${_OTHER_ARGS[*]}"
 
-  local long_opts="help,extend-session,workdir:"
+  local long_opts="help,extend-session,workdir:,ssh-opts-string:"
   local short_opts="h,e,A,v,E:,w:"
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -43,6 +43,11 @@ function execute_remotely() {
       ;;&
     --E)
       extend_session_time=$2
+      shift
+      ;;&
+    --ssh-opts-string)
+      read -r -a tmp_array <<<"$2"
+      _AWS_SSH_OPTS+=("${tmp_array[@]}")
       shift
       ;;&
     -e | --extend-session) ((extend_count++)) ;;&
@@ -73,17 +78,30 @@ function execute_remotely() {
     _AWS_SSH_OPTS+=(-o ClientAliveCountMax="$extend_count")
   fi
 
-  utils::maybe_set_login_string
-  local exec_cmd=$1
+  [[ -z $LOGINSTR ]] && utils::maybe_set_login_string
+  [[ $# -gt 2 ]] && {
+    echo "Too many arguments"
+    help_msg
+    return 1
+  }
+
+  local exec_cmd_log=$1
+  local exec_cmd_no_log=$2
   if [[ $verbosity =~ 'v' ]]; then
-    echo "Executing the command: <$exec_cmd>"
+    echo "Executing the command (with logging): <$exec_cmd_log>"
+    echo "Executing the second command: <$exec_cmd_no_log>"
     [[ $verbosity =~ 'vv' ]] && echo "SSH options used: ${_AWS_SSH_OPTS[*]}"
     [[ $verbosity =~ 'vvv' ]] && echo "The config file in use: $EC2_CFG_FILE"
   fi
+
+  local exec_cmd
+  exec_cmd="{ cd $workdir; bash -c '$exec_cmd_log'; } |& tee -a $ec2_log_file"
+  [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
   utils::info '***'
-  ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" \
-    "{ cd $workdir; bash -c '$exec_cmd'; } |& tee -a $ec2_log_file"
+  ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$exec_cmd"
   utils::info '***'
 }
 
-execute_remotely "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  execute::remote_command "$@"
+fi
