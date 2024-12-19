@@ -46,12 +46,7 @@ function login::sanity_checks_and_setup_finalization() {
   )
   if ! [[ $ec2_state =~ (stopped|running) ]]; then
     utils::info "The machine is currently in a transient state: '$ec2_state'"
-    utils::info 'Re-run the command in a few seconds'
-    utils::info 'Use the following command to check the status manually:'
-    utils::info 'aws ec2 describe-instances \'
-    utils::info "  --instance-ids $instance_id \\"
-    utils::info '  --query "Reservations[*].Instances[*].State.Name" \'
-    utils::info '  --output text'
+    utils::info "One can monitor the machine state with 'ec2 ls' command"
     return 1
   fi
   if [[ ${#_ADD_IP4_TO_SG_OPTS[@]} -gt 0 ]]; then
@@ -174,7 +169,7 @@ login::maybe_add_ip4_to_sg() {
     sg_id=$(utils::select_option "${sg_ids[@]}") || return 1
   fi
   if [[ $revoke_time -le 0 ]]; then
-    utils::set_cfg_entry revoke-rule-uri:- "$instance_id%$ip4%$sg_id"
+    utils::set_cfg_entry revoke-rule-uri "$instance_id%$ip4%$sg_id"
   else
     echo "Revoking the ssh access for '$ip4' in $revoke_time seconds"
     {
@@ -199,27 +194,20 @@ function login::ec2_public_ip_from_instance_id() {
 }
 
 function login::clean_up() {
-  local instance_id=$1
-  [[ -z $instance_id ]] && {
-    >&2 echo 'Impl.error: No instance id provided.'
-    return 1
-  }
-  local revoke_rule_uri
+  local revoke_rule_uri instance_id=$1
   echo "Searching the inbound rules added by ec2.."
   revoke_rule_uri=$(utils::get_cfg_entry revoke-rule-uri:-)
   [[ -z $revoke_rule_uri ]] && {
     echo "No rules found."
     return
   }
-  local found_any=false
-  if [[ -n $revoke_rule_uri ]]; then
-    while IFS=% read -r iid ip4 sg_id; do
-      [[ $iid != "$instance_id" ]] && continue
-      login::revoke_ssh_inbound_rule "$sg_id" "$ip4"
-      found_any=true
-    done <<<"$revoke_rule_uri"
-  fi
-  if $found_any; then
+  IFS=% read -r iid ip4 sg_id <<<"$revoke_rule_uri"
+  [[ $# -gt 0 && $iid != "$instance_id" ]] && {
+    >&2 echo "Instance ID validation mismatch"
+    return 2
+  }
+  login::revoke_ssh_inbound_rule "$sg_id" "$ip4" && {
+    utils::set_cfg_entry revoke-rule-uri
     echo "Cleaned up!"
-  fi
+  }
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
-source "$LIB_DIR/aws-login.sh"
 declare -A _CHECKS
 
 function help_msg() {
@@ -201,4 +200,6 @@ function scp_file() {
   scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
 }
 
-scp_file "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  scp_file "$@"
+fi

@@ -82,17 +82,23 @@ function execute::remote_command() {
   [[ $# -gt 2 ]] && {
     echo "Too many arguments"
     help_msg
-    return 1
+    return 2
   }
 
   local exec_cmd_log=$1
   local exec_cmd_no_log=$2
-  if [[ $verbosity =~ 'v' ]]; then
+  case $verbosity in
+  vvvv*)
+    >&2 echo "Wrong verbosity level"
+    return 2
+    ;;
+  v*)
     echo "Executing the command (with logging): <$exec_cmd_log>"
     echo "Executing the second command: <$exec_cmd_no_log>"
-    [[ $verbosity =~ 'vv' ]] && echo "SSH options used: ${_AWS_SSH_OPTS[*]}"
-    [[ $verbosity =~ 'vvv' ]] && echo "The config file in use: $EC2_CFG_FILE"
-  fi
+    ;;&
+  vv*) echo "SSH options used: ${_AWS_SSH_OPTS[*]}" ;;&
+  vvv*) echo "The config file in use: $EC2_CFG_FILE" ;;
+  esac
 
   local exec_cmd
   exec_cmd="{ cd $workdir; bash -c '$exec_cmd_log'; } |& tee -a $ec2_log_file"

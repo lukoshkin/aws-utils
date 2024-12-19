@@ -3,7 +3,7 @@
 EC2_FOLDER=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
 EC2_CFG_FOLDER=$EC2_FOLDER/ec2_login_opts
 EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
-EC2_CFG_FILE=
+# EC2_CFG_FILE=
 
 _cfg() {
   [[ -z $1 || $1 = "$EC2_CFG_MAIN" ]] && [[ -z $EC2_CFG_FILE ]] && {
@@ -82,7 +82,8 @@ utils::set_cfg_entry() {
       if [[ $key =~ :-$ ]]; then
         sed -ri "/^$key/,/^$/d" "$cfg"
       else
-        sed -ri "/^$key:\(?!-\)/d" "$cfg"
+        grep -q "^$key:-" "$cfg" && return
+        sed -ri "/^$key:/d" "$cfg"
       fi
       return
     }
