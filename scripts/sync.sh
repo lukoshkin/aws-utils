@@ -25,7 +25,7 @@ function sync_remote_with_client() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -57,11 +57,11 @@ function sync_remote_with_client() {
   local dst=${2:-$src}
   [[ -z $src ]] && {
     echo Missing client folder to sync
-    return 1
+    return 2
   }
   [[ -d $src ]] || {
     echo "'$src' is either not a folder or the path does not exist"
-    return 1
+    return 2
   }
 
   # shellcheck disable=SC2034

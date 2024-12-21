@@ -9,11 +9,11 @@ function help_msg() {
 
 function clean_up() {
   declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return 1
+  dot::light_pick "$@" || return $?
   [[ ${#_OTHER_ARGS[@]} -gt 0 ]] && {
-    >&2 echo "Currently, no other than --pick arguments are supported."
+    utils::error "Currently, no other than --pick arguments are supported."
     help_msg
-    return 1
+    return 2
   }
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)

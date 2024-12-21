@@ -25,11 +25,14 @@ function login::sanity_checks_and_setup_finalization() {
     LOGINSTR=$(utils::get_cfg_entry logstr)
     [[ -n $LOGINSTR ]] && {
       echo "Using the cached login and host string.."
+      utils::warn "Note this case, no guarantee the string is up to date"
+      echo "For a safer login, omit the '-s' flag."
       return
     }
     echo "Not able to skip the sanity checks, since "
     echo "the cached login and host string is not found."
   fi
+  echo "To skip the sanity checks, use '-s' flag"
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
   [[ -z $instance_id ]] && {
@@ -61,7 +64,7 @@ function login::sanity_checks_and_setup_finalization() {
     login::maybe_add_ip4_to_sg "$instance_id" "${_ADD_IP4_TO_SG_OPTS[@]}"
   elif ! [[ $ip4 = $(curl -s ifconfig.me)/32 ]]; then
     if ! [[ $ip4 = 0.0.0.0/0 ]]; then
-      >&2 echo "The current IP address is not white-listed"
+      utils::error "The current IP address is not white-listed"
       utils::set_cfg_entry connection "blocked"
     fi
   fi
@@ -86,7 +89,7 @@ function login::sanity_checks_and_setup_finalization() {
 
 login::start_ec2_instances() {
   for instance_id in "$@"; do
-    utils::valid_instance_id_check "$instance_id" || return 1
+    utils::valid_instance_id_check "$instance_id" || return $?
   done
 
   aws ec2 start-instances --instance-ids "$@"
@@ -108,7 +111,7 @@ login::maybe_add_ip4_to_sg() {
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -131,13 +134,13 @@ login::maybe_add_ip4_to_sg() {
       ;;
     *)
       echo Impl.error
-      return 1
+      return 2
       ;;
     esac
   done
 
   shift
-  utils::valid_instance_id_check "$1" || return 1
+  utils::valid_instance_id_check "$1" || return $?
   local instance_id=$1
 
   echo "Checking the inbound rules for the instance.."
@@ -166,7 +169,7 @@ login::maybe_add_ip4_to_sg() {
     sg_id=${sg_ids[0]}
   else
     PS3="Select the security group to add the SSH inbound rule to:"
-    sg_id=$(utils::select_option "${sg_ids[@]}") || return 1
+    sg_id=$(utils::select_option "${sg_ids[@]}") || return $?
   fi
   if [[ $revoke_time -le 0 ]]; then
     utils::set_cfg_entry revoke-rule-uri "$instance_id%$ip4%$sg_id"
@@ -185,7 +188,7 @@ login::maybe_add_ip4_to_sg() {
 }
 
 function login::ec2_public_ip_from_instance_id() {
-  utils::valid_instance_id_check "$1" || return 1
+  utils::valid_instance_id_check "$1" || return $?
   local instance_id=$1
   aws ec2 describe-instances \
     --instance-ids "$instance_id" \
@@ -203,7 +206,7 @@ function login::clean_up() {
   }
   IFS=% read -r iid ip4 sg_id <<<"$revoke_rule_uri"
   [[ $# -gt 0 && $iid != "$instance_id" ]] && {
-    >&2 echo "Instance ID validation mismatch"
+    utils::error "Instance ID validation mismatch"
     return 2
   }
   login::revoke_ssh_inbound_rule "$sg_id" "$ip4" && {

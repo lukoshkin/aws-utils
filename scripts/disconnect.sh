@@ -15,7 +15,7 @@ function help_msg() {
 
 function disconnect() {
   declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return 1
+  dot::light_pick "$@" || return $?
   eval set -- "${_OTHER_ARGS[*]}"
 
   local long_opts="help,no-cleanup,via-exec"
@@ -23,7 +23,7 @@ function disconnect() {
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -44,7 +44,7 @@ function disconnect() {
   [[ -n $1 ]] && {
     echo "Unknown argument: $1"
     help_msg
-    return 1
+    return 2
   }
 
   local instance_id
@@ -63,6 +63,8 @@ function disconnect() {
   if ! $no_cleanup; then
     login::clean_up "$instance_id"
   fi
+
+  utils::set_cfg_entry logstr
 }
 
 disconnect "$@"

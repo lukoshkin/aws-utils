@@ -20,7 +20,7 @@ forward_port() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -55,7 +55,7 @@ forward_port() {
 
   if [[ ${#hosts[@]} -gt ${#ports[@]} ]]; then
     echo "Number of ports should be equal to or greater than the hosts thereof"
-    return 1
+    return 2
   fi
 
   declare -a mappings

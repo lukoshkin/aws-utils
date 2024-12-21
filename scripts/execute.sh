@@ -17,7 +17,7 @@ function help_msg() {
 
 function execute::remote_command() {
   declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return 1
+  dot::light_pick "$@" || return $?
   eval set -- "${_OTHER_ARGS[*]}"
 
   local long_opts="help,extend-session,workdir:,ssh-opts-string:"
@@ -25,7 +25,7 @@ function execute::remote_command() {
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -61,7 +61,7 @@ function execute::remote_command() {
   [[ -z $1 ]] && {
     echo "Missing the command to execute"
     help_msg
-    return 1
+    return 2
   }
   local sshkey ec2_log_file
   ec2_log_file=$(utils::ec2_log_file)
@@ -89,7 +89,7 @@ function execute::remote_command() {
   local exec_cmd_no_log=$2
   case $verbosity in
   vvvv*)
-    >&2 echo "Wrong verbosity level"
+    utils::error "Wrong verbosity level"
     return 2
     ;;
   v*)
@@ -103,9 +103,9 @@ function execute::remote_command() {
   local exec_cmd
   exec_cmd="{ cd $workdir; bash -c '$exec_cmd_log'; } |& tee -a $ec2_log_file"
   [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
-  utils::info '***'
+  utils::info "$SEP0"
   ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$exec_cmd"
-  utils::info '***'
+  utils::info "$SEP0"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

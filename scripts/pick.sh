@@ -10,17 +10,12 @@ pick() {
   [[ $# -gt 1 ]] && {
     echo "No more than one argument is allowed."
     help_msg
-    return 1
+    return 2
   }
-
   local cfg_file
-  cfg_file=$(pk::pick "$1") || {
-    help_msg
-    return 1
-  }
+  cfg_file=$(pk::pick "$1") || return $?
   # shellcheck disable=SC2034
   EC2_CFG_FILE=
-
   utils::set_cfg_entry cfg_file "$cfg_file"
 }
 

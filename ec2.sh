@@ -30,7 +30,7 @@ ec2() {
     bash "$scripts"/connect.sh "$@"
     ;;
   execute)
-    bash "$scripts"/execute.sh "$@" # TODO: test more
+    bash "$scripts"/execute.sh "$@"
     ;;
   disconnect)
     bash "$scripts"/disconnect.sh "$@"
@@ -45,7 +45,7 @@ ec2() {
     bash "$scripts"/porforwar.sh "$@"
     ;;
   clean-up)
-    bash "$scripts"/clean-up.sh "$@" # TODO: test more
+    bash "$scripts"/clean-up.sh "$@"
     ;;
   install-completions)
     [[ $# -gt 1 ]] && {

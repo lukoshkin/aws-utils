@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
-source "$SCRIPT_DIR/execute.sh"
 
 _help_msg() {
   echo "Usage: $0 [OPTIONS] [login_and_host]"
@@ -31,7 +30,7 @@ _update_connection_status() {
 
 function connect() {
   declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return 1
+  dot::light_pick "$@" || return $?
   eval set -- "${_OTHER_ARGS[*]}"
 
   local long_opts="help,skip-checks,cache-opts,detach,workdir:,entrypoint:,ip:,revoke-time:,non-interactive"
@@ -40,7 +39,7 @@ function connect() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -77,13 +76,13 @@ function connect() {
 
   shift
   [[ -n $1 ]] && {
-    >&2 echo "'connect' does not accept any positional arguments"
-    return 1
+    utils::error "'connect' does not accept any positional arguments"
+    return 2
   }
 
   case $cache_opts in
   ccc*)
-    >&2 echo "Wrong cache-opts value"
+    utils::error "Wrong cache-opts value"
     return 2
     ;;
   c*)
@@ -97,35 +96,33 @@ function connect() {
     ;;
   esac
 
-  login::sanity_checks_and_setup_finalization || return 1
+  login::sanity_checks_and_setup_finalization || return $?
   entrypoint=${entrypoint:-$(utils::get_cfg_entry entrypoint)}
   entrypoint=$(utils::strip_quotes "${entrypoint:-':'}")
   workdir=${workdir:-$(utils::get_cfg_entry workdir)}
   workdir=$(utils::strip_quotes "${workdir:-'~'}")
 
-  echo '---'
+  echo "$SEP1"
   echo "Connecting to <$LOGINSTR>" # defined in login::sanity_checks_and_setup_finalization
   echo -n "The selected instance name: "
   echo -e "$(utils::c "$(cut -d% -f2 <<<"$EC2_CFG_FILE")" 37 1)"
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
 
+  export EC2_CFG_FILE LOGINSTR
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
-  ## TODO: currently the logstr key is not set until the session is active
-  ## ec2 connect -> Working on the server -> <Ctrl-d>: only now logstr is set
-  ## Let's create a small file on the host and download it back. If we managed
-  ## to do it, then the connection is 'active'.
   if ! ${_SKIP_CHECKS}; then
-    :
+    [[ $(timeout 5 bash "$SCRIPT_DIR"/execute.sh "echo" | tail -1) = $SEP0 ]]
+    _update_connection_status
   fi
 
   if ! $detach; then
-    execute::remote_command -w "$workdir" \
+    # -t to set a working directory and run interactive session from it
+    # -A to forward your '.ssh' folder on the remote machine
+    bash "$SCRIPT_DIR"/execute.sh -w "$workdir" \
       --ssh-opts-string='-tA -o ServerAliveInterval=100' \
       "$entrypoint" "exec \$SHELL"
-    # -A to forward your '.ssh' folder
-    # -t to set a working directory and run interactive session from it
   fi
   _update_connection_status
   echo "Detaching.."

@@ -12,8 +12,8 @@ function _check_columns() {
   sorted_headers=("$(printf "%s\n" "${@}" | sort)")
   sorted_columns=("$(printf "%s\n" "${columns[@]}" | sort)")
   [[ "${sorted_headers[*]}" = "${sorted_columns[*]}" ]] || {
-    >&2 echo "Expected columns: ${columns[*]}"
-    >&2 echo "Actual columns: ${headers[*]}"
+    utils::error "Expected columns: ${columns[*]}"
+    utils::error "Actual columns: ${headers[*]}"
     return 1
   }
 }
@@ -23,7 +23,7 @@ function init() {
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
-    _check_columns "${headers[@]}" || return 1
+    _check_columns "${headers[@]}" || return $?
 
     local num=0
     while IFS='|' read -r -a values; do
@@ -34,7 +34,7 @@ function init() {
 
       local name
       local instance_id=${instance_opts[instance_id]}
-      utils::valid_instance_id_check "$instance_id" || return 1
+      utils::valid_instance_id_check "$instance_id" || return $?
       name=$(
         aws ec2 describe-instances \
           --instance-ids "$instance_id" \
@@ -43,7 +43,7 @@ function init() {
       ) || name=""
 
       local file suffix="$name%$instance_id"
-      file=$(utils::unique_file_by_affix suffix "$suffix") || return 1
+      file=$(utils::unique_file_by_affix suffix "$suffix") || return $?
       [[ -z $name ]] && {
         if [[ -n $file ]]; then
           EC2_CFG_FILE=$file
@@ -53,8 +53,7 @@ function init() {
           echo "then call 'init' command again. You can also remove it"
           echo "if no longer needed."
         fi
-        >&2 utils::info No instance on AWS side with ID: "$instance_id"
-        # TODO: switch to utils::warn
+        utils::warn No instance on AWS side with ID: "$instance_id"
         continue
       }
 

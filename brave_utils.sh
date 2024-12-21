@@ -5,7 +5,7 @@ set_if_new() {
     if [[ -n ${!opt_name} ]]; then
         >&2 echo "Expected no more than one $opt_name"
         >&2 echo "You passed: ${!opt_name} and $set_value"
-        return 1
+        return 2
     fi
     echo "$set_value"
 }
@@ -14,21 +14,21 @@ brave::parse_one_option() {
     local short_target long_target opt_with_value
     while [[ $1 != -- ]]; do
         case $1 in
-        --*) long_target=$(set_if_new long_target "$1") || return 1 ;;&
+        --*) long_target=$(set_if_new long_target "$1") || return $? ;;&
         -?)
-            short_target=$(set_if_new short_target "$1") || return 1
+            short_target=$(set_if_new short_target "$1") || return $?
             [[ ${#short_target} -eq 1 ]] && {
                 >&2 echo "Expected a one symbol option"
-                return 1
+                return 2
             }
             ;;&
         [^-]*)
             if [[ $1 =~ true|false ]]; then
-                opt_with_value=$(set_if_new opt_with_value "$1") || return 1
+                opt_with_value=$(set_if_new opt_with_value "$1") || return $?
             else
                 >&2 echo "Invalid argument: <$1>"
                 >&2 echo "Expected: -short|--long|true|false"
-                return 1
+                return 2
             fi
             ;;&
         *) shift ;;
@@ -66,7 +66,7 @@ brave::parse_one_option() {
                         local next_arg=$((++i))
                         [[ $i -le $# ]] || {
                             >&2 echo "Option $long_target requires a value"
-                            return 1
+                            return 2
                         }
                         _TARGET_OPTIONS+=("${!next_arg}")
                     fi
@@ -77,7 +77,7 @@ brave::parse_one_option() {
                 if [[ -n $left2 ]]; then
                     >&2 echo "Option $short_target requires a value"
                     >&2 echo "You passed it like $arg"
-                    return 1
+                    return 2
                 fi
                 if [[ -n ${left1#-} ]]; then
                     _OTHER_ARGS+=("$left1")
@@ -88,7 +88,7 @@ brave::parse_one_option() {
                     local next_arg=$((++i))
                     [[ ${!next_arg} =~ ^-.* ]] && {
                         >&2 echo "Option $short_target requires a value"
-                        return 1
+                        return 2
                     }
                     _TARGET_OPTIONS+=("${!next_arg}")
                 fi

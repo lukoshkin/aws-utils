@@ -4,8 +4,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 function is_number() {
   [[ $1 =~ ^[0-9]+$ ]] || {
-    >&2 echo "Invalid input: $1"
-    return 1
+    utils::error "Invalid input: $1"
+    return 2
   }
 }
 
@@ -42,8 +42,8 @@ function create_instance_map() {
     blocked) name=$(utils::c "$name" 33) ;;
     missing) name=$(utils::c "$name" 47 9) ;;
     *)
-      >&2 echo "Impl.error: Unknown connection state: $conn"
-      return 1
+      utils::error "Impl.error: Unknown connection state: $conn"
+      return 2
       ;;
     esac
 
@@ -91,7 +91,7 @@ function peek() {
     [[ $# -gt 0 ]] && ! [[ $1 =~ ^(\+|\?|\+\?|\?\+)$ ]] && {
       echo "Impl.error: Invalid argument: <$1>"
       echo "Allowed ones: '?', '+', '?+', '+?'"
-      return 1
+      return 2
     }
     keymap=("${!_INSTANCE_MAP[@]}")
     ;;&
@@ -118,39 +118,39 @@ function pk::pick() {
   local _choice choice=$1
   [[ -n $choice && $choice != = ]] && {
     choice=${choice#=}
-    is_number "$choice" || return 1
+    is_number "$choice" || return $?
     local _choice=$choice
     [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
   }
   declare -A _INSTANCE_MAP
   declare -a names
   declare -a cfgs
-  create_instance_map || return 1
+  create_instance_map || return $?
   names=("${!_INSTANCE_MAP[@]}")
   [[ -n $_choice ]] && {
     cfgs=("${_INSTANCE_MAP[@]}")
     if [[ -n ${cfgs[$_choice]} ]]; then
       echo "${cfgs[$_choice]}"
-      return 0
+      return
     else
-      >&2 echo "No option found with the #'$choice'"
+      utils::error "No option found with the #'$choice'"
       >&2 peek '+'
       return 1
     fi
   }
   read -rp "$(peek '?')"
-  is_number "$REPLY" || return 1
-  if [[ -n $REPLY && -n ${names[$REPLY - 1]} ]]; then
-    echo "${_INSTANCE_MAP[${names[$REPLY - 1]}]}"
-    return 0
+  is_number "$REPLY" || return $?
+  if [[ -n $REPLY && -n ${names[REPLY - 1]} ]]; then
+    echo "${_INSTANCE_MAP[${names[REPLY - 1]}]}"
+    return
   else
-    >&2 echo "Invalid selection"
+    utils::error "Invalid selection"
     return 1
   fi
 }
 
 function pk::peek() {
   declare -A _INSTANCE_MAP
-  create_instance_map || return 1
+  create_instance_map || return $?
   peek '+'
 }

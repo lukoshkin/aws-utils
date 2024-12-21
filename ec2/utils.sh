@@ -1,9 +1,11 @@
 #!/bin/bash
 
+SEP0='***'
+SEP1='---'
+
 EC2_FOLDER=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
 EC2_CFG_FOLDER=$EC2_FOLDER/ec2_login_opts
 EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
-# EC2_CFG_FILE=
 
 _cfg() {
   [[ -z $1 || $1 = "$EC2_CFG_MAIN" ]] && [[ -z $EC2_CFG_FILE ]] && {
@@ -13,16 +15,39 @@ _cfg() {
   echo "$EC2_CFG_FOLDER/${1:-$EC2_CFG_FILE}"
 }
 
+utils::c() {
+  local text=$1
+  local reset="\033[0m"
+  shift
+
+  local fg=$1
+  local ta=${2:-$_TEXT_ATTR}
+  local bg=${3:-$_BG_COLOR}
+
+  if [[ -n $bg ]]; then
+    echo "\033[${ta:-0};${fg};${bg}m$text$reset"
+  fi
+  echo "\033[${ta:-0};${fg}m$text$reset"
+}
+
 utils::info() {
-  echo -e "$(utils::c "$1" 35)"
+  echo -e "$(utils::c "$*" 35)"
+}
+
+utils::warn() {
+  >&2 echo -e "$(utils::c "$*" 33)"
+}
+
+utils::error() {
+  >&2 echo -e "$(utils::c "$*" 31)"
 }
 
 utils::unique_file_by_affix() {
   local folder=${3:-$EC2_CFG_FOLDER}
   folder="${folder%/}"
   [[ -d $folder ]] || {
-    >&2 echo "No such directory: $folder"
-    return 1
+    utils::error "No such directory: $folder"
+    return 2
   }
   local prefix=$2
   local file
@@ -37,16 +62,16 @@ utils::unique_file_by_affix() {
     file=("$folder/"*"$prefix"*)
     ;;
   *)
-    >&2 echo "Unknown affix: $2"
+    utils::error "Unknown affix: $2"
     return 2
     ;;
   esac
 
   if [[ ${#file[@]} -gt 1 ]]; then
-    >&2 echo "Impl.error: the file is not unique"
-    >&2 echo "Multiple files found with the prefix $prefix:"
+    utils::error "Impl.error: the file is not unique"
+    utils::error "Multiple files found with the prefix $prefix:"
     for path in "${file[@]}"; do
-      >&2 echo -n "$(realpath --relative-to "$folder" "$path") "
+      utils::error -n "$(realpath --relative-to "$folder" "$path") "
     done
     return 1
   fi
@@ -124,8 +149,8 @@ declare -a AWS_SSH_OPTS=(
 
 utils::valid_instance_id_check() {
   [[ $1 =~ ^i- ]] || {
-    >&2 echo "Invalid instance id: <$1>"
-    return 1
+    utils::error "Invalid instance id: <$1>"
+    return 2
   }
 }
 
@@ -139,7 +164,7 @@ utils::strip_quotes() {
 utils::select_option() {
   select option in "$@"; do
     [[ -z $option ]] && {
-      >&2 echo "Invalid selection"
+      utils::error "Invalid selection"
       return 1
     }
     echo "$option"
@@ -155,19 +180,4 @@ utils::maybe_set_login_string() {
     exit 1
   }
   echo "$msg"
-}
-
-utils::c() {
-  local text=$1
-  local reset="\033[0m"
-  shift
-
-  local fg=$1
-  local ta=${2:-$_TEXT_ATTR}
-  local bg=${3:-$_BG_COLOR}
-
-  if [[ -n $bg ]]; then
-    echo "\033[${ta:-0};${fg};${bg}m$text$reset"
-  fi
-  echo "\033[${ta:-0};${fg}m$text$reset"
 }

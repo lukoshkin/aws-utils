@@ -46,7 +46,7 @@ function get_stem() {
 function get_rm_cp_cmd() {
   local target
   target=$(get_stem "$1")
-  [[ -z $target ]] && return 1
+  [[ -z $target ]] && return 2
   echo "rm -rf /tmp/$target{,.tar.gz} && cp -r $1 /tmp/$target"
 }
 
@@ -116,7 +116,7 @@ function scp_file() {
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return 1
+    return 2
   }
   eval set -- "$params"
 
@@ -143,7 +143,7 @@ function scp_file() {
   [[ -z $src ]] && {
     echo Missing source file to copy
     help_msg
-    return 1
+    return 2
   }
   # shellcheck disable=SC2034
   EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
@@ -159,9 +159,9 @@ function scp_file() {
     }
     [[ -z ${UPLOAD+any} ]] && {
       src="$LOGINSTR:$src"
-      check_destination "$dst" || return 1
+      check_destination "$dst" || return $?
     } || {
-      check_destination "$dst" host || return 1
+      check_destination "$dst" host || return $?
       dst="$LOGINSTR:$dst"
     }
     scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
@@ -185,14 +185,14 @@ function scp_file() {
   tar_cmd=$(get_tar_cmd "$target" $gz)
   rm_cp_cmd=$(get_rm_cp_cmd "$src") || {
     echo "Invalid source file"
-    return 1
+    return $?
   }
   [[ -z ${UPLOAD+any} ]] && {
-    check_destination "$dst" || return 1
+    check_destination "$dst" || return $?
     src="$LOGINSTR:/tmp/$target.tar${gz}"
     ssh "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$rm_cp_cmd && cd /tmp && $tar_cmd"
   } || {
-    check_destination "$dst" host || return 1
+    check_destination "$dst" host || return $?
     eval "$rm_cp_cmd && cd /tmp && $tar_cmd"
     src="/tmp/$target.tar${gz}"
     dst="$LOGINSTR:$dst"
