@@ -11,8 +11,12 @@ if [[ -z $_AWS_SSH_OPTS ]]; then
 fi
 
 function dot::light_pick() {
-  declare -a _TARGET_OPTIONS
+  declare -a _TARGET_OPTIONS # declaring it here limits its usage
+  ## However, we won't use anywhere outside this function.
   brave::parse_one_option true -p --pick -- "$@" || return $?
+  brave::split_target_opt_value_by_comma
+
+  [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 1 ]] && return
   EC2_CFG_FILE=${EC2_CFG_FILE:-$(utils::get_cfg_entry cfg_file)}
   if [[ ${#_TARGET_OPTIONS[@]} -gt 0 || -z $EC2_CFG_FILE ]]; then
     EC2_CFG_FILE=$(pk::pick "${_TARGET_OPTIONS[1]}") || return $?

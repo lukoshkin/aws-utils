@@ -14,10 +14,6 @@ function help_msg() {
 }
 
 function disconnect() {
-  declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return $?
-  eval set -- "${_OTHER_ARGS[*]}"
-
   local long_opts="help,no-cleanup,via-exec"
   local short_opts="h,a"
   local params
@@ -67,4 +63,11 @@ function disconnect() {
   utils::set_cfg_entry logstr
 }
 
-disconnect "$@"
+declare -a _OTHER_ARGS
+dot::light_pick "$@" || return $?
+eval set -- "${_OTHER_ARGS[*]}"
+
+for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
+  EC2_CFG_FILE=$(pk::pick "${_SPLIT_TARGET_OPTIONS[i]}") || return $?
+  disconnect "$@"
+done

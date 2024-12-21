@@ -29,10 +29,6 @@ _update_connection_status() {
 }
 
 function connect() {
-  declare -a _OTHER_ARGS
-  dot::light_pick "$@" || return $?
-  eval set -- "${_OTHER_ARGS[*]}"
-
   local long_opts="help,skip-checks,cache-opts,detach,workdir:,entrypoint:,ip:,revoke-time:,non-interactive"
   local short_opts="h,s,c,d,w:,e:,t:,n"
   local params
@@ -128,4 +124,18 @@ function connect() {
   echo "Detaching.."
 }
 
-connect "$@"
+declare -a _OTHER_ARGS
+dot::light_pick "$@" || return $?
+eval set -- "${_OTHER_ARGS[*]}"
+
+if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 1 ]] &&
+  ! [[ $* =~ (^|[[:space:]])-[a-zA-Z]*d.* ]]; then
+  utils::error "Cannot connect to multiple instances at once."
+  utils::info "One can use '-d' in combination with '-p' to start multiple instances."
+  exit 2
+fi
+
+for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
+  EC2_CFG_FILE=$(pk::pick "${_SPLIT_TARGET_OPTIONS[i]}") || return $?
+  connect "$@"
+done
