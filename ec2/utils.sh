@@ -128,8 +128,13 @@ utils::set_cfg_entry() {
   fi
 }
 
+function utils::ec2_user() {
+  EC2_USER=${EC2_USER:-$(utils::get_cfg_entry user)}
+  echo "${EC2_USER:-ubuntu}"
+}
+
 function utils::ec2_log_file() {
-  echo "/tmp/ec2_$USER-$(utils::get_cfg_entry user)-last_login.log"
+  echo "/tmp/ec2_$USER-$(utils::ec2_user)-last_login.log"
 }
 
 declare -a AWS_SSH_OPTS=(

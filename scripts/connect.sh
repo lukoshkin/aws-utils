@@ -29,8 +29,8 @@ _update_connection_status() {
 }
 
 function connect() {
-  local long_opts="help,skip-checks,cache-opts,detach,workdir:,entrypoint:,ip:,revoke-time:,non-interactive"
-  local short_opts="h,s,c,d,w:,e:,t:,n"
+  local long_opts="help,skip-checks,cache-opts,detach,user:,workdir:,entrypoint:,ip:,revoke-time:,non-interactive"
+  local short_opts="h,s,c,d,u:,w:,e:,t:,n"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -51,6 +51,10 @@ function connect() {
     -s | --skip-checks) _SKIP_CHECKS=true ;;&
     -c | --cache-opts) cache_opts+=c ;;&
     -d | --detach) detach=true ;;&
+    -u | --user)
+      EC2_USER="$2"
+      shift
+      ;;&
     -w | --workdir)
       workdir="$2"
       shift
@@ -84,6 +88,7 @@ function connect() {
   c*)
     echo 'Caching workdir and entrypoint..'
     [[ -n $workdir ]] && utils::set_cfg_entry workdir "$workdir"
+    [[ -n $EC2_USER ]] && utils::set_cfg_entry user $EC2_USER
     [[ -n $entrypoint ]] && utils::set_cfg_entry entrypoint "$entrypoint"
     ;;&
   cc*)
@@ -105,7 +110,7 @@ function connect() {
   echo "Working directory is '$workdir'"
   echo "Entrypoint cmd: '$entrypoint'"
 
-  export EC2_CFG_FILE LOGINSTR
+  export EC2_CFG_FILE EC2_USER LOGINSTR
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
   if ! ${_SKIP_CHECKS}; then
@@ -127,6 +132,11 @@ function connect() {
 declare -a _OTHER_ARGS
 dot::light_pick "$@" || exit $?
 eval set -- "${_OTHER_ARGS[*]}"
+
+if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -eq 0 ]]; then
+  connect "$@"
+  exit $?
+fi
 
 if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 2 ]] &&
   ! [[ $* =~ (^|[[:space:]])-[a-zA-Z]*d.* ]]; then

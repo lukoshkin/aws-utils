@@ -9,8 +9,7 @@ function infer_login_str() {
     echo "$check_in_str"
   }
   local ec2_user
-  ec2_user=$(utils::get_cfg_entry user)
-  ec2_user=${ec2_user:-ubuntu}
+  ec2_user=$(utils::ec2_user)
   if [[ $check_in_str = ec2*amazonaws.com ]]; then
     check_in_str="$ec2_user@$check_in_str"
   elif [[ $check_in_str != *ec2*amazonaws.com ]]; then
