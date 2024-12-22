@@ -86,7 +86,7 @@ brave::parse_one_option() {
           _TARGET_OPTIONS+=("$right")
         else
           local next_arg=$((++i))
-          [[ ${!next_arg} =~ ^-.* ]] && {
+          [[ $next_arg -ge $# || ${!next_arg} =~ ^-.* ]] && {
             >&2 echo "Option $short_target requires a value"
             return 2
           }
@@ -103,13 +103,17 @@ brave::parse_one_option() {
 }
 
 brave::split_target_opt_value_by_comma() {
+  if ((${#_TARGET_OPTIONS[@]} % 2 != 0)); then
+    utils::error "The option requires a value!"
+    exit 2
+  fi
   _SPLIT_TARGET_OPTIONS=()
   for ((i = 0; i < ${#_TARGET_OPTIONS[@]}; i += 2)); do
     local target=${_TARGET_OPTIONS[i]} value=${_TARGET_OPTIONS[i + 1]}
     if [[ $value =~ , ]]; then
       IFS=, read -r -a values <<<"$value"
-      for val in "${values[@]}"; do
-        _SPLIT_TARGET_OPTIONS+=("$target" "$val")
+      for part in "${values[@]}"; do
+        _SPLIT_TARGET_OPTIONS+=("$target" "$part")
       done
     else
       _SPLIT_TARGET_OPTIONS+=("$target" "$value")

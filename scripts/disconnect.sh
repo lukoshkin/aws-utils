@@ -64,7 +64,7 @@ function disconnect() {
 }
 
 declare -a _OTHER_ARGS
-dot::light_pick "$@" || return $?
+dot::light_pick "$@" || exit $?
 eval set -- "${_OTHER_ARGS[*]}"
 
 for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
