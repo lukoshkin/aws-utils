@@ -6,7 +6,7 @@ LIB_DIR="$REPO_DIR/ec2"
 source "$REPO_DIR/brave_utils.sh"
 source "$LIB_DIR/pick.sh"
 
-if [[ -z $_AWS_SSH_OPTS ]]; then
+if [[ -z ${_AWS_SSH_OPTS[*]} ]]; then
   _AWS_SSH_OPTS=("${AWS_SSH_OPTS[@]}")
 fi
 
@@ -21,4 +21,39 @@ function dot::light_pick() {
   if [[ ${#_TARGET_OPTIONS[@]} -gt 0 || -z $EC2_CFG_FILE ]]; then
     EC2_CFG_FILE=$(pk::pick "${_TARGET_OPTIONS[1]}") || return $?
   fi
+}
+
+function dot::manage_multiple_instances() {
+  if ! [[ $* =~ [[:space:]]--[[:space:]] ]]; then
+    utils::error "Impl.error: '--' not provided."
+    return 2
+  fi
+
+  local fn_name=$1
+  shift
+
+  declare -a checks
+  while [[ $1 != -- ]]; do
+    checks+=("$1")
+    shift
+  done
+  shift
+
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
+  for check in "${checks[@]}"; do
+    $check || return $?
+  done
+
+  if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -eq 0 ]]; then
+    $fn_name "$@"
+    return $?
+  fi
+
+  for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
+    EC2_CFG_FILE=$(pk::pick "${_SPLIT_TARGET_OPTIONS[i]}") || return $?
+    $fn_name "$@"
+  done
 }

@@ -129,23 +129,13 @@ function connect() {
   echo "Detaching.."
 }
 
-declare -a _OTHER_ARGS
-dot::light_pick "$@" || exit $?
-eval set -- "${_OTHER_ARGS[*]}"
+function check_option_d() {
+  if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 2 ]] &&
+    ! [[ $* =~ (^|[[:space:]])-[a-zA-Z]*d.* ]]; then
+    utils::error "Cannot connect to multiple instances at once."
+    utils::info "One can use '-d' in combination with '-p' to start multiple instances."
+    return 2
+  fi
+}
 
-if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -eq 0 ]]; then
-  connect "$@"
-  exit $?
-fi
-
-if [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 2 ]] &&
-  ! [[ $* =~ (^|[[:space:]])-[a-zA-Z]*d.* ]]; then
-  utils::error "Cannot connect to multiple instances at once."
-  utils::info "One can use '-d' in combination with '-p' to start multiple instances."
-  exit 2
-fi
-
-for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
-  EC2_CFG_FILE=$(pk::pick "${_SPLIT_TARGET_OPTIONS[i]}") || exit $?
-  connect "$@"
-done
+dot::manage_multiple_instances connect check_option_d -- "$@"

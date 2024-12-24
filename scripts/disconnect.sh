@@ -63,11 +63,4 @@ function disconnect() {
   utils::set_cfg_entry logstr
 }
 
-declare -a _OTHER_ARGS
-dot::light_pick "$@" || exit $?
-eval set -- "${_OTHER_ARGS[*]}"
-
-for ((i = 1; i < ${#_SPLIT_TARGET_OPTIONS[@]}; i = i + 2)); do
-  EC2_CFG_FILE=$(pk::pick "${_SPLIT_TARGET_OPTIONS[i]}") || return $?
-  disconnect "$@"
-done
+dot::manage_multiple_instances disconnect -- "$@"

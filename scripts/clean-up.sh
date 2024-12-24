@@ -20,4 +20,4 @@ function clean_up() {
   login::clean_up "$instance_id"
 }
 
-clean_up "$@"
+dot::manage_multiple_instances clean_up -- "$@"
