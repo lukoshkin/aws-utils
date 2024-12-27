@@ -25,6 +25,8 @@ function create_instance_map() {
   local current_cfg
   current_cfg=$(utils::get_cfg_entry cfg_file)
 
+  declare -A num_opt_map
+  declare -A opt_cfg_map
   while IFS=% read -r num name iid; do
     local conn state selected=0 opt='  '
     EC2_CFG_FILE="$num%$name%$iid"
@@ -48,18 +50,21 @@ function create_instance_map() {
     esac
 
     opt+="$name"
-    _INSTANCE_MAP[$opt]=$EC2_CFG_FILE
+    num_opt_map[$num]=$opt
+    opt_cfg_map[$opt]=$EC2_CFG_FILE
   done <<<"$instances"
+  for i in "${!num_opt_map[@]}"; do
+    _PICK_OPTS+=("${num_opt_map[$i]}")
+    _PICK_CFGS+=("${opt_cfg_map["${num_opt_map[$i]}"]}")
+  done
 }
 
 function enrich_instance_map() {
   echo "Scrapping the latest data.."
-  for name in "${!_INSTANCE_MAP[@]}"; do
-    local instance_id state
-    instance_id=$(cut -d% -f3 <<<"${_INSTANCE_MAP[$name]}") || {
-      echo 'Impl.error: Improper file name format'
-      return 2
-    }
+  for ((i = 0; i < ${#_PICK_CFGS[@]}; i++)); do
+    local name instance_id state
+    instance_id=${_PICK_CFGS[i]##*%}
+    name=${_PICK_OPTS[i]}
     state=$(
       aws ec2 describe-instances \
         --instance-ids "$instance_id" \
@@ -78,14 +83,13 @@ function enrich_instance_map() {
     *) ;;
     esac
     name+=" $state_sign"
-    _ENRICHED_INSTANCE_MAP[$name]=${_INSTANCE_MAP[$name]}
-    _KEYMAP+=("$name") # associative arrays are not ordered
-    ## That is why we need _KEYMAP - to output options in the same order
+    _PEEK_OPTS+=("$name")
   done
 }
 
 function peek() {
-  local keymap prompt
+  local prompt
+  declare -a opts
   case $1 in
   *)
     [[ $# -gt 0 ]] && ! [[ $1 =~ ^(\+|\?|\+\?|\?\+)$ ]] && {
@@ -93,21 +97,20 @@ function peek() {
       echo "Allowed ones: '?', '+', '?+', '+?'"
       return 2
     }
-    keymap=("${!_INSTANCE_MAP[@]}")
+    opts=("${_PICK_OPTS[@]}")
     ;;&
   *\+*)
-    declare -a _KEYMAP
-    declare -A _ENRICHED_INSTANCE_MAP
+    declare -a _PEEK_OPTS
     enrich_instance_map
-    keymap=("${_KEYMAP[@]}")
+    opts=("${_PEEK_OPTS[@]}")
     ;;&
   *\?*) prompt="Select the one to continue with: " ;;
   esac
 
   local num=1
   echo -e "$(utils::c "Available instances:" 37 1)"
-  for name in "${keymap[@]}"; do
-    echo -e "$((num++))) $name"
+  for ((i = 0; i < ${#opts[@]}; i++)); do
+    echo -e "$((i + 1))) ${opts[i]}"
   done
   if [[ -n $prompt ]]; then
     echo "$prompt"
@@ -122,15 +125,11 @@ function pk::pick() {
     local _choice=$choice
     [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
   }
-  declare -A _INSTANCE_MAP
-  declare -a names
-  declare -a cfgs
+  declare -a _PICK_OPTS=() _PICK_CFGS=()
   create_instance_map || return $?
-  names=("${!_INSTANCE_MAP[@]}")
   [[ -n $_choice ]] && {
-    cfgs=("${_INSTANCE_MAP[@]}")
-    if [[ -n ${cfgs[$_choice]} ]]; then
-      echo "${cfgs[$_choice]}"
+    if [[ -n ${_PICK_CFGS[$_choice]} ]]; then
+      echo "${_PICK_CFGS[$_choice]}"
       return
     else
       utils::error "No option found with the #'$choice'"
@@ -140,8 +139,8 @@ function pk::pick() {
   }
   read -rp "$(peek '?')"
   is_number "$REPLY" || return $?
-  if [[ -n $REPLY && -n ${names[REPLY - 1]} ]]; then
-    echo "${_INSTANCE_MAP[${names[REPLY - 1]}]}"
+  if [[ -n $REPLY && -n ${_PICK_CFGS[REPLY - 1]} ]]; then
+    echo "${_PICK_CFGS[REPLY - 1]}"
     return
   else
     utils::error "Invalid selection"

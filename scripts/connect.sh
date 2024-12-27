@@ -114,8 +114,10 @@ function connect() {
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
   if ! ${_SKIP_CHECKS}; then
-    [[ $(timeout 5 bash "$SCRIPT_DIR"/execute.sh "echo" | tail -1) = $SEP0 ]]
-    _update_connection_status
+    local _ending
+    _ending=$(timeout 5 bash "$SCRIPT_DIR"/execute.sh "echo" | tail -1)
+    _ending=$(sed -E 's/\x1B\[[0-9;]*m//g' <<<"$_ending")
+    [[ $_ending = "$SEP0" ]] && _update_connection_status
   fi
 
   if ! $detach; then

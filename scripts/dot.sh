@@ -24,7 +24,7 @@ function dot::light_pick() {
 }
 
 function dot::manage_multiple_instances() {
-  if ! [[ $* =~ [[:space:]]--[[:space:]] ]]; then
+  if ! [[ $* =~ [[:space:]]--([[:space:]]|$) ]]; then
     utils::error "Impl.error: '--' not provided."
     return 2
   fi

@@ -20,7 +20,8 @@ function infer_login_str() {
 }
 
 function login::sanity_checks_and_setup_finalization() {
-  if ${_SKIP_CHECKS:-false}; then
+  local skip_checks=${_SKIP_CHECKS:-false}
+  if $skip_checks; then
     LOGINSTR=$(utils::get_cfg_entry logstr)
     [[ -n $LOGINSTR ]] && {
       echo "Using the cached login and host string.."
@@ -30,8 +31,9 @@ function login::sanity_checks_and_setup_finalization() {
     }
     echo "Not able to skip the sanity checks, since "
     echo "the cached login and host string is not found."
+    _SKIP_CHECKS=false
   fi
-  echo "To skip the sanity checks, use '-s' flag"
+  $skip_checks || echo "To skip the sanity checks, use '-s' flag"
   local instance_id
   instance_id=$(utils::get_cfg_entry instance_id)
   [[ -z $instance_id ]] && {
