@@ -1,5 +1,8 @@
 # AWS CLI Utils
 
+NOTE! THE README IS OUTDATED FOR THIS BRANCH  
+AND IS RELEVANT FOR THE OLDER IMPLEMENTATION at `0.x.x` BRANCH
+
 Easy management of AWS EC2 instances
 
 _With the proper configuration, one can login, download/upload, forward ports,  

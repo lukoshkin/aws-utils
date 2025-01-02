@@ -110,6 +110,10 @@ function check_destination() {
 }
 
 function scp_file() {
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
   local long_opts="help,upload,tar,gzip"
   local short_opts="h,u,t,z"
   local params
@@ -145,8 +149,6 @@ function scp_file() {
     help_msg
     return 2
   }
-  # shellcheck disable=SC2034
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   utils::maybe_set_login_string
 
   declare -a _AWS_SSH_OPTS

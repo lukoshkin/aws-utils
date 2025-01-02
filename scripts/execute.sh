@@ -108,6 +108,7 @@ function execute::remote_command() {
   utils::info "$SEP0"
 }
 
+## NOTE: might be extended to executing commands across multiple instances
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   execute::remote_command "$@"
 fi

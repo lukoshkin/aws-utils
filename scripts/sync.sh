@@ -19,6 +19,10 @@ function help_msg() {
 }
 
 function sync_remote_with_client() {
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
   local long_opts="help,execute:,all-files,client-always-right,dry-run"
   local short_opts="h,e:,a,n"
   local params
@@ -63,9 +67,6 @@ function sync_remote_with_client() {
     echo "'$src' is either not a folder or the path does not exist"
     return 2
   }
-
-  # shellcheck disable=SC2034
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
   utils::maybe_set_login_string
 
   declare -a aws_ssh_opts
