@@ -1,13 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source "$(dirname $0)/login.sh"
+source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
   printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
   echo "Sync DST folder on the host with the SRC folder on the client"
   echo
   echo "If DST is not provided, it defaults to SRC"
-  echo "One can configure defaults using $HOME_LOGIN_CFG"
+  echo "One can configure defaults using $EC2_CFG_MAIN"
   echo
   echo "Options:"
   echo "  -h, --help                   Show this help message and exit"
@@ -18,20 +19,24 @@ function help_msg() {
 }
 
 function sync_remote_with_client() {
-  local long_opts="execute:,all-files,client-always-right,dry-run,help"
-  local short_opts="e:,a,n,h"
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
+  local long_opts="help,execute:,all-files,client-always-right,dry-run"
+  local short_opts="h,e:,a,n"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 2
   }
   eval set -- "$params"
 
   local sync_command all_files=false no_update=false dry_run=-v
-  sync_command=$(login::get_cfg_entry sync_command)
+  sync_command=$(utils::get_cfg_entry sync_command)
   sync_command=${sync_command:-$(
-    login::get_cfg_entry sync_command "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry sync_command "$EC2_CFG_MAIN"
   )}
 
   while [[ $1 != -- ]]; do
@@ -42,24 +47,12 @@ function sync_remote_with_client() {
       ;;
     -e | --execute)
       sync_command=${2#=}
-      shift 2
-      ;;
-    -a | --all-files)
-      all_files=true
       shift
-      ;;
-    --client-always-right)
-      no_update=true
-      shift
-      ;;
-    -n | --dry-run)
-      dry_run=-nv
-      shift
-      ;;
-    *)
-      echo Impl.error
-      return 1
-      ;;
+      ;;&
+    --client-always-right) no_update=true ;;&
+    -a | --all-files) all_files=true ;;&
+    -n | --dry-run) dry_run=-nv ;;&
+    *) shift ;;
     esac
   done
 
@@ -68,14 +61,16 @@ function sync_remote_with_client() {
   local dst=${2:-$src}
   [[ -z $src ]] && {
     echo Missing client folder to sync
-    return 1
+    return 2
   }
   [[ -d $src ]] || {
     echo "'$src' is either not a folder or the path does not exist"
-    return 1
+    return 2
   }
+  utils::maybe_set_login_string
 
-  login::maybe_set_login_string
+  declare -a aws_ssh_opts
+  aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
   declare -a rest_opts_and_args=(
     -az
     --progress
@@ -84,9 +79,6 @@ function sync_remote_with_client() {
     "${LOGINSTR}:$dst"
   )
   $no_update && unset 'rest_opts_and_args[2]'
-
-  declare -a aws_ssh_opts
-  aws_ssh_opts=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Since we run without `eval`, `dry_run` can't be empty.
   ## Or will be treated as an empty argument otherwise

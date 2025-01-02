@@ -1,18 +1,21 @@
-#!/bin/bash
-
-source "$(dirname $0)/login.sh"
+#!/usr/bin/env bash
+source "$(dirname "$0")/dot.sh"
 declare -A _CHECKS
 
 function help_msg() {
-  printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
-  echo "Copy file from SRC to DST."
-  echo 'To copy from local to host (EC2 instance), prefix with `UPLOAD= `'
+  echo "Usage: $0 [OPTIONS] SRC [DST]"
+  echo "Transfer files and archives between the client and a host."
+  echo "To copy from local to host (EC2 instance), use '-u' flag"
+  echo "or prefix the whole command with 'UPLOAD=':"
+  echo
+  echo "UPLOAD= ec2 scp-file file_on_client file_on_host"
   echo
   echo "If DST is not provided, it defaults to SRC"
-  echo "One can configure defaults using $HOME_LOGIN_CFG"
+  echo "One can configure defaults using $EC2_CFG_MAIN"
   echo
   echo "Options:"
   echo "  -h, --help        Show this help message and exit"
+  echo "  -u, --upload      Reverse the file transfer: upload from local to host"
   echo "  -t, --tar         Tar the source folder before copying"
   echo "  -z, --gzip        Gzip the tared folder"
 }
@@ -43,7 +46,7 @@ function get_stem() {
 function get_rm_cp_cmd() {
   local target
   target=$(get_stem "$1")
-  [[ -z $target ]] && return 1
+  [[ -z $target ]] && return 2
   echo "rm -rf /tmp/$target{,.tar.gz} && cp -r $1 /tmp/$target"
 }
 
@@ -87,7 +90,7 @@ function check_destination() {
   if eval "${_CHECKS["[[ -f $dst ]]"]}"; then
     eval "${_CHECKS["[[ $dst = /tmp/* ]]"]}" && {
       local overwrite
-      overwrite=$(login::get_cfg_entry overwrite_in_tmp "$HOME_LOGIN_CFG")
+      overwrite=$(utils::get_cfg_entry overwrite_in_tmp "$EC2_CFG_MAIN")
       if [[ $overwrite = true ]]; then
         echo "Overwriting destination file: $display_dst"
         echo "There might be problems because of the existing file permissions"
@@ -107,13 +110,17 @@ function check_destination() {
 }
 
 function scp_file() {
-  local long_opts="tar,gzip,help"
-  local short_opts="t,z,h"
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
+  local long_opts="help,upload,tar,gzip"
+  local short_opts="h,u,t,z"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
-    return "$CUSTOM_ES"
+    return 2
   }
   eval set -- "$params"
 
@@ -124,36 +131,28 @@ function scp_file() {
       help_msg
       return
       ;;
-    -t | --tar)
-      via_tar=any
-      shift
-      ;;
-    -z | --gzip)
-      gz=.gz
-      shift
-      ;;
-
-    *)
-      echo Impl.error
-      return 1
-      ;;
+    -u | --upload) UPLOAD=any ;;&
+    -t | --tar) via_tar=any ;;&
+    -z | --gzip) gz=.gz ;;&
+    *) shift ;;
     esac
   done
 
   shift
   local src=$1
   local dst=${2:-$(
-    login::get_cfg_entry scp_default_dst "$HOME_LOGIN_CFG"
+    utils::get_cfg_entry scp_default_dst "$EC2_CFG_MAIN"
   )}
   local dst=${dst:-$src}
   [[ -z $src ]] && {
     echo Missing source file to copy
     help_msg
-    return 1
+    return 2
   }
-  login::maybe_set_login_string
+  utils::maybe_set_login_string
+
   declare -a _AWS_SSH_OPTS
-  _AWS_SSH_OPTS=(-i "$(login::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
+  _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
 
   ## Copying a single file
   [[ -z $via_tar ]] && {
@@ -162,9 +161,9 @@ function scp_file() {
     }
     [[ -z ${UPLOAD+any} ]] && {
       src="$LOGINSTR:$src"
-      check_destination "$dst" || return 1
+      check_destination "$dst" || return $?
     } || {
-      check_destination "$dst" host || return 1
+      check_destination "$dst" host || return $?
       dst="$LOGINSTR:$dst"
     }
     scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
@@ -188,14 +187,14 @@ function scp_file() {
   tar_cmd=$(get_tar_cmd "$target" $gz)
   rm_cp_cmd=$(get_rm_cp_cmd "$src") || {
     echo "Invalid source file"
-    return 1
+    return $?
   }
   [[ -z ${UPLOAD+any} ]] && {
-    check_destination "$dst" || return 1
+    check_destination "$dst" || return $?
     src="$LOGINSTR:/tmp/$target.tar${gz}"
     ssh "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$rm_cp_cmd && cd /tmp && $tar_cmd"
   } || {
-    check_destination "$dst" host || return 1
+    check_destination "$dst" host || return $?
     eval "$rm_cp_cmd && cd /tmp && $tar_cmd"
     src="/tmp/$target.tar${gz}"
     dst="$LOGINSTR:$dst"
@@ -203,4 +202,6 @@ function scp_file() {
   scp "${_AWS_SSH_OPTS[@]}" "$src" "$dst"
 }
 
-scp_file "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  scp_file "$@"
+fi

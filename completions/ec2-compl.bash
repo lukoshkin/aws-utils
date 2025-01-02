@@ -2,7 +2,7 @@
 
 _ec2_completions() {
   local subcommands
-  subcommands="connect scp-file sync porfowar disconnect install-completions"
+  subcommands="connect pick scp-file sync porforwar clean-up disconnect install-completions"
   COMPREPLY=() # is defined already, we just clear it
   ## Do not try `declare -a` on it ─ will break everything.
 
@@ -16,7 +16,7 @@ _ec2_completions() {
   local opts file_mode
   case "${COMP_WORDS[1]}" in
   connect)
-    opts="-h --help -d --detach -e --execute= -t --revoke-time= --ip="
+    opts="-h --help -p --pick-instance= -d --detach -e --execute= -t --revoke-time= --ip="
     mapfile -t COMPREPLY < <(compgen -W "$opts" -- "${COMP_WORDS[-1]}")
     ;;
   scp-file)
