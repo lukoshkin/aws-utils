@@ -1,29 +1,12 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
-
-function _check_columns() {
-  local columns=(
-    "instance_id"
-    "sshkey"
-    "user"
-    "workdir"
-    "entrypoint"
-  )
-  sorted_headers=("$(printf "%s\n" "${@}" | sort)")
-  sorted_columns=("$(printf "%s\n" "${columns[@]}" | sort)")
-  [[ "${sorted_headers[*]}" = "${sorted_columns[*]}" ]] || {
-    utils::error "Expected columns: ${columns[*]}"
-    utils::error "Actual columns: ${headers[*]}"
-    return 1
-  }
-}
+source "$LIB_DIR/init.sh"
 
 function init() {
-  # EC2_CFG_FILE= # We could have shown explicitly the var is empty
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
-    _check_columns "${headers[@]}" || return $?
+    init::check_columns "${headers[@]}" || return $?
 
     local num=0
     while IFS='|' read -r -a values; do

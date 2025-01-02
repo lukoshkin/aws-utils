@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
+source "$LIB_DIR/init.sh"
 
 function help_msg() {
   echo "Usage: $0 instance_id=<instance_id> [sshkey=<sshkey>] [user=<user>] [workdir=<workdir>]"
@@ -10,6 +11,7 @@ function help_msg() {
   echo "  sshkey      - the SSH key to use"
   echo "  user        - the user to use for SSH connection"
   echo "  workdir     - the working directory on the instance"
+  echo "  entrypoint  - the entrypoint cmd to run on the instance startup"
 }
 
 function register_instance() {
@@ -17,6 +19,16 @@ function register_instance() {
   ## TODO: check the content of the config table before adding an instance
   ## The instance may be already there
   declare -A row
+
+  if [[ -z ${columns[*]} ]]; then
+    columns=(instance_id sshkey user workdir entrypoint)
+    utils::set_cfg_entry instance_opts:- "$(
+      IFS='|'
+      echo "${columns[*]}"
+    )"
+  else
+    init::check_columns "${columns[@]}" || return $?
+  fi
 
   for ((pos = 1; pos <= ${#@}; pos++)); do
     if ! [[ ${!pos} =~ = ]]; then
@@ -64,8 +76,7 @@ function register_instance() {
     local value=${row[$col]}
     [[ -n $value ]] && line+="$value|"
   done
-  # shellcheck disable=SC2034
-  EC2_CFG_FILE= # just to make sure
+
   line=${line%|}
   utils::set_cfg_entry instance_opts:- "$line"
   line=${line//\\/}
