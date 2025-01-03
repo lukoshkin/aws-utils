@@ -6,7 +6,7 @@ function init() {
   mkdir -p "$EC2_CFG_FOLDER"
   {
     IFS="|" read -r -a headers
-    init::check_columns "${headers[@]}" || return $?
+    init::check_headers "${headers[@]}" || return $?
 
     local num=0
     while IFS='|' read -r -a values; do

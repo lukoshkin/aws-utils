@@ -4,7 +4,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 function is_number() {
   [[ $1 =~ ^[0-9]+$ ]] || {
-    utils::error "Invalid input: $1"
+    utils::error "Invalid input: <$1>"
     return 2
   }
 }
@@ -121,9 +121,11 @@ function pk::pick() {
   local _choice choice=$1
   [[ -n $choice && $choice != = ]] && {
     choice=${choice#=}
-    is_number "$choice" || return $?
-    local _choice=$choice
-    [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
+    _choice=$choice
+    if [[ -n $choice ]]; then
+      is_number "$choice" || return $?
+      [[ $choice -ge 1 ]] && { _choice=$((choice - 1)); }
+    fi
   }
   declare -a _PICK_OPTS=() _PICK_CFGS=()
   create_instance_map || return $?

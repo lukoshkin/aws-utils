@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
-INIT_CFG_COLUMNS=(
+declare -a INIT_CFG_COLUMNS=(
   "instance_id"
   "sshkey"
   "user"
@@ -9,7 +9,7 @@ INIT_CFG_COLUMNS=(
   "entrypoint"
 )
 
-function init::check_columns() {
+function init::check_headers() {
   sorted_headers=("$(printf "%s\n" "${@}" | sort)")
   sorted_columns=("$(printf "%s\n" "${INIT_CFG_COLUMNS[@]}" | sort)")
   [[ "${sorted_headers[*]}" = "${sorted_columns[*]}" ]] || {

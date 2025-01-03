@@ -21,7 +21,7 @@ ec2() {
     bash "$scripts"/pick.sh "$@"
     ;;
   add)
-    bash "$scripts"/add.sh "$@" # TODO: test more
+    bash "$scripts"/add.sh "$@"
     ;;
   ls | info)
     bash "$scripts"/info.sh "$@"

@@ -18,8 +18,24 @@ function dot::light_pick() {
 
   [[ ${#_SPLIT_TARGET_OPTIONS[@]} -gt 2 ]] && return
   EC2_CFG_FILE=${EC2_CFG_FILE:-$(utils::get_cfg_entry cfg_file)}
-  if [[ ${#_TARGET_OPTIONS[@]} -gt 0 || -z $EC2_CFG_FILE ]]; then
-    EC2_CFG_FILE=$(pk::pick "${_TARGET_OPTIONS[1]}") || return $?
+  if [[ ${#_TARGET_OPTIONS[@]} -gt 0 ]]; then
+    EC2_CFG_FILE=$(pk::pick "${_TARGET_OPTIONS[1]}")
+    return $?
+  fi
+  if [[ -z $EC2_CFG_FILE ]]; then
+    local cfg_count
+    cfg_count=$(find "$EC2_CFG_FOLDER" -maxdepth 1 -type f | wc -l)
+    if [[ $cfg_count -eq 0 ]]; then
+      utils::warn "You might need to register instances first:"
+      utils::warn " - read about 'ec2 add/init' commands"
+      utils::warn " - check the folder: $EC2_CFG_FOLDER"
+      return 1
+    elif [[ $cfg_count -eq 1 ]]; then
+      EC2_CFG_FILE=$(ls -1 "$EC2_CFG_FOLDER")
+    else
+      utils::warn "You should pick the instance first"
+      return 2
+    fi
   fi
 }
 

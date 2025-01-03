@@ -74,8 +74,8 @@ function execute::remote_command() {
     _AWS_SSH_OPTS+=(-A)
   fi
   if [[ $extend_count -gt 0 ]]; then
-    _AWS_SSH_OPTS+=(-o ClientAliveInterval="$extend_session_time")
-    _AWS_SSH_OPTS+=(-o ClientAliveCountMax="$extend_count")
+    _AWS_SSH_OPTS+=(-o ServerAliveInterval="$extend_session_time")
+    _AWS_SSH_OPTS+=(-o ServerAliveCountMax="$extend_count")
   fi
 
   [[ -z $LOGINSTR ]] && utils::maybe_set_login_string

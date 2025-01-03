@@ -15,24 +15,23 @@ function help_msg() {
 }
 
 function register_instance() {
-  IFS='|' read -r -a columns < <(utils::get_cfg_entry instance_opts | head -1)
-  ## TODO: check the content of the config table before adding an instance
-  ## The instance may be already there
+  IFS=$'\n' read -r -d '' -a content < <(utils::get_cfg_entry instance_opts)
+  IFS='|' read -r -a headers <<<"${content[0]}"
   declare -A row
 
-  if [[ -z ${columns[*]} ]]; then
-    columns=(instance_id sshkey user workdir entrypoint)
+  if [[ -z ${headers[*]} ]]; then
+    headers=("${INIT_CFG_COLUMNS[@]}")
     utils::set_cfg_entry instance_opts:- "$(
       IFS='|'
-      echo "${columns[*]}"
+      echo "${headers[*]}"
     )"
   else
-    init::check_columns "${columns[@]}" || return $?
+    init::check_headers "${headers[@]}" || return $?
   fi
 
   for ((pos = 1; pos <= ${#@}; pos++)); do
     if ! [[ ${!pos} =~ = ]]; then
-      row[${columns[$pos - 1]}]=${!pos}
+      row[${headers[$pos - 1]}]=${!pos}
       continue
     fi
     IFS='=' read -r left right <<<"${!pos}"
@@ -53,6 +52,14 @@ function register_instance() {
     return $?
   }
 
+  for line in "${content[@]:1}"; do
+    [[ $line =~ ${row[instance_id]} ]] && {
+      utils::warn "Instance ${row[instance_id]} is already registered"
+      utils::warn "To update it with 'add' command - delete the entry first"
+      return
+    }
+  done
+
   if [[ -z ${row[sshkey]} ]]; then
     declare -a keys
     keys=(~/.ssh/*.pem)
@@ -72,7 +79,7 @@ function register_instance() {
 
   local line
   row[sshkey]=${row[sshkey]//\//\\/}
-  for col in "${columns[@]}"; do
+  for col in "${headers[@]}"; do
     local value=${row[$col]}
     [[ -n $value ]] && line+="$value|"
   done
