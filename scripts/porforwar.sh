@@ -7,15 +7,19 @@ _help_msg() {
   echo "Forward ports from a remote host to the client"
   echo
   echo "Options:"
-  echo "  --help                    Display this help message"
+  echo "  --help                    Show this help message"
   echo "  -s, --split               Split 'ssh -N -L .. -L ..' into 'ssh -NL ... &' and 'ssh -NL ... &'"
   echo "  -H HOST, --host HOST      Host to forward the port from. Default: localhost"
-  echo "  -p PORT, --port PORT      Port to forward"
+  echo "  -P PORT, --port PORT      Port to forward"
 }
 
 forward_port() {
+  declare -a _OTHER_ARGS
+  dot::light_pick "$@" || return $?
+  eval set -- "${_OTHER_ARGS[*]}"
+
   local long_opts="help,split,port:,host:"
-  local short_opts="h,s,p:,H:"
+  local short_opts="h,s,P:,H:"
   local params
 
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
@@ -34,7 +38,7 @@ forward_port() {
       return
       ;;
     -s | --split) split=true ;;& # Currently, I doubt it's useful
-    -p | --port)
+    -P | --port)
       ports+=("${2#=}")
       shift
       ;;&
@@ -46,9 +50,7 @@ forward_port() {
     esac
   done
 
-  # shellcheck disable=SC2034
-  EC2_CFG_FILE=$(utils::get_cfg_entry cfg_file)
-  utils::maybe_set_login_string
+  [[ -z $LOGINSTR ]] && utils::maybe_set_login_string
 
   declare -a aws_ssh_opts
   aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")
