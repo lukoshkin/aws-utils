@@ -1,8 +1,5 @@
 # AWS CLI Utils
 
-NOTE! THE README IS OUTDATED FOR THIS BRANCH  
-AND IS RELEVANT FOR THE OLDER IMPLEMENTATION at `0.x.x` BRANCH
-
 Easy management of AWS EC2 instances
 
 _With the proper configuration, one can login, download/upload, forward ports,  
@@ -15,34 +12,47 @@ and execute commands remotely with a minor adjustment_
 1. Configure an access to AWS resources.  
    For example, go through `aws configure`
 
-1. Create and populate `~/.ec2_login_opts`.  
-   You should specify at least which ssh key to use.  
-   `ec2_login_opts.example` will help.
+1. Download the key pairs of your EC2 instances in `~/.ssh/` folder.  
+   One can optionally pre-populate the `main.cfg` file with some of the
+   defaults at<br>the bottom of `main.cfg.example`.
 
 ## Usage
 
-1. **Connect** (or resume and connect) to an EC2 instance
+0. Set up the connection to an EC2 instance
 
    ```bash
-   ec2 connect  # using the value of `instance_id` key in '~/.ec2_login_opts'
-   ec2 connect 10.111.101.01  # using IP4 (caches also "login and host string" to '/tmp/ec2_$USER-last_login_opts')
-   ec2 connect ubuntu@ec2-10-111-101-01.compute-1.amazonaws.com  # using "login and host string"
-   ec2 connect  # using the cached value of "login and host string"
+   ec2 add i-<instance_id_1> /path/to/corresponding/key1.pem
+   ec2 add i-<instance_id_2> /path/to/corresponding/key2.pem
+   ec2 init
    ```
 
-   Note that `connect` can add the proper inbound rule for ssh-connections for
-   your dynamic IP4 if you specify the instance id in the `~/.ec2_login_opts`.
+   More about the setup process in the help message: `ec2 add -h`.  
+   Almost any subcommand has a help message, just add `-h` to it.
+
+1. **Connect** (or resume it and connect) to an EC2 instance
+
+   ```bash
+   ec2 pick 2  # Make the second instance the default one
+   ec2 connect  # Connect to the default instance
+   # or
+   ec2 connect --pick  # select the instance interactively before connecting
+   ## (same as `ec2 pick` + `ec2 connect`)
+   # or
+   ec2 connect -p=2
+   ```
+
+   Note that the order in `ec2 pick` may differ from the order of adding instances.
 
 2. **Transfer files**
 
    ```bash
    ec2 scp-file '~/table.csv' /tmp  # download /home/ubuntu/table.csv from the host
-   UPLOAD= ec2 scp-file ~/new-table.csv /tmp  # upload $HOME/new-table.csv to host's /tmp
+   ec2 scp-file -u ~/new-table.csv /tmp  # upload $HOME/new-table.csv to host's /tmp
+   UPLOAD= ec2 scp-file ~/new-table.csv /tmp  # The same as the previous command but using the old syntax
    ec2 scp-file -tz '~/datadir' . # download by tarring (`-t` - required for a folder) and compressing (`-z`) the folder
    ```
 
-   One can configure default destination paths for uploads and downloads in `~/.ec2_login_opts`.  
-   (Not implemented yet.)
+   One can configure default destination paths for uploads and downloads by editing `main.cfg`.
 
 3. **Sync host folder with its counterpart on the client**
 
@@ -60,36 +70,56 @@ and execute commands remotely with a minor adjustment_
    ec2 sync --client-always-right ~/aws-utils '~/aws-utils'  # Update with client files even if they are older
    ```
 
-4. **Forward ports** (Por favor)
+4. After resuming an EC2 instance and picking the default one, commands
+   execution is available
 
    ```bash
-   ec2 porforwar  # default port is 6006
-   PORT=8080 ec2 porforwar
-   ```
-
-5. **Advanced settings for login and enhanced `connect` functionality**
-
-   ```bash
-   ec2 connect -d  # Connect but do not start an interactive session (useful to run other commands: scp-file, sync, ...)
-   ec2 connect -e "<cmd to execute>"  # Execute command without logging in
-   ec2 connect -e "$(cat <<EOF
+   ec2 execute ls  # Single-word command
+   ec2 execute 'ls -l'  # Command with arguments
+   ec2 execute "$(cat <<EOF
      <command_1>
      ...
      <command_N>
    EOF
    )"  # Multi-line command or several commands execution
-   ec2 connect -e "bash -s" < script.sh  # Execution from a script
-
-   ec2 connect -d --ip 0.0.0.0/0 --revoke-time 300  # Establish the connection with SSH inbound rule set for any IP for 5 minutes
-   ## After 5 minutes, the '0.0.0.0/0' SSH inbound rule will be revoked.
+   ec2 execute "bash -s" < script.sh  # Execution from a script
    ```
 
-6. **Shutdown from the client**  
+5. **Forward ports** (Por favor)
+
+   ```bash
+   ec2 porforwar -P 5000 -P 3000 -P 9000  # Forwarding -L 5000:localhost:5000 -L 8000:localhost:8000 -L 9000:localhost:9000
+   ec2 porforwar -P 5000 -P 9090 -H :app:R  # Forwarding -R localhost:5000:app:5000 -L 9090:localhost:9090
+   ```
+
+6. **Advanced settings for login and enhanced `connect` functionality**
+
+   ```bash
+   ec2 connect -s  # If connected previously, `-s` allows to skip some checks and save time
+   ec2 connect -d  # Connect but do not start an interactive session (useful to run other commands: scp-file, sync, ...)
+   ec2 connect -d --ip 0.0.0.0/0 --revoke-time 300  # Establish the connection with SSH inbound rule set for any IP for 5 minutes
+   ## After 5 minutes, the '0.0.0.0/0' SSH inbound rule will be revoked.
+
+   ec2 connect -w ~/my_project_folder -e 'docker compose up -d'  # Set the working directory and run a command on the login
+   ec2 connect -c -w ~/my_project_folder -e 'docker compose up -d'  # Same as the one above + cache the settings
+   ec2 connect -p=3 -cc  # Connect to the third instance and remember the choice
+   ```
+
+7. **Shutdown from the client**  
    Clears `$TMP_LOGIN_OPTS` and shuts down the instance.  
    If `$TMP_LOGIN_OPTS` does not exist, will use `instance_id` from `$HOME_LOGIN_OPTS`
 
    ```bash
    ec2 dicsconnect
+   ec2 disconnect -p=1,2  # Shutdown the first and the second instances
+   ```
+
+8. **Other commands**
+
+   ```bash
+   ec2 ls  # List available connections and their statuses/states
+   ec2 clean-up  # Remove added SSH inbound rules
+   ec2 home  # Show the path to the ec2 folder
    ```
 
 ## Installation
@@ -121,26 +151,27 @@ and execute commands remotely with a minor adjustment_
 
 ## Configuration
 
-Improve your user experience with `~/.ec2_login_opts`.  
-Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
+Improve the user experience with `main.cfg` and `ec2_login_opts/`.  
+Check the example [`main.cfg.example`](./main.cfg.example)
+
+Adjustable from config files in `ec2_login_opts/`:
 
 - `user` - user under which to login on the remote host
 - `instance_id` - static id of the EC2 instance  
    It allows to fetch IP4 address without explicitly specifying it in the command
 - `sshkey` - path to your key pair used for connecting to the machine
 - `workdir` - the directory you get in after ssh login (scope: `ec2 connect`)
-- `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
-- `idle_on_first_login` - extra sleep time on the first login after resuming the machine
 - `sync_command` - the command to execute on the host each time after `sync`
 - `entrypoint` - the command to execute on the host on each login.
+
+To be used in `main.cfg`:
+
+- `overwrite_in_tmp` - whether to overwrite destination file if it is in /tmp folder (scope: `ec2 scp-file`)
+- `idle_on_first_login` - extra sleep time on the first login after resuming the machine
 - `scp_default_dst` - scp's default destination folder (scope: `ec2 scp-file`)  
    If not specified, defaults to `$src`
 
 ### Small nuances
-
-- **Cached login options reset**  
-  When modifying `~/.ec2_login_opts`, the cached values in `/tmp/ec2_$USER-last_login_opts`  
-  are no longer valid. One should manually remove the latter file before the next `ec2` command.
 
 - **Custom path to the configuration file**  
   Modifying the configuration file path is possible with the environment variable `EC2_LOGIN_CFG_PATH`.  
@@ -161,8 +192,8 @@ Check the example [`ec2_login_opts.example`](./ec2_login_opts.example)
 
   <Ctrl-d>
 
-  ## After adding "user: foreign" to your configuration file (~/.ec2_login_opts)
-  ec2 connect
+  ## After adding "user: foreign" to your configuration file (~/ec2_login_opts/<cfg_file>)
+  ec2 connect -u foreign
   ## Now you are logged in as "foreign"
   ```
 
@@ -177,7 +208,7 @@ ec2 install-completions  # will install for the login shell
 Or to install to a specific shellrc file (either zhsrc, bashrc or `~/.bash_profile.sh`)
 
 ```bash
-ec2 install-completions shellrc_file
+ec2 install-completions <shellrc_file>
 ```
 
 ## TODO
@@ -185,12 +216,13 @@ ec2 install-completions shellrc_file
 - [x] Add README
 - [x] Add `ec2` executable
 - [x] Add installation
-- [x] Add customization of defaults in `~/.ec2_login_opts`
+- [x] Add customization of defaults in `main.cfg`
 - [x] Add `disconnect` subcommand  
        (unlike `sudo shutdown -h now` on the host, it should also manage  
        clearing the cached values in `/tmp/ec2_$USER-last_login_opts`)
 - [x] Add bash/zsh completions for ec2
 - [x] Manage more than one EC2 instance
-- [ ] Rewrite to use a separate tmp config for each instance
-- [ ] Update README after finishing multi-instance management feature
+- [x] Rewrite to use a separate config for each instance
+- [x] Update README after finishing multi-instance management feature
+- [ ] Add a GIF with a demo
 - [ ] Rename/move/migrate to "aws-cli-utils"?

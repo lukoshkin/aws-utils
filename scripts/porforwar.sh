@@ -84,13 +84,13 @@ forward_port() {
     for ((i = 0; i < ${#mappings[@]}; )); do
       local opt_name=${mappings[i]}
       local addr=${mappings[i + 1]}
-      echo "Forwarding $opt_name $addr ..."
+      echo "Forwarding $opt_name $addr"
       ssh "${aws_ssh_opts[@]}" -N "$opt_name" "$addr" "$LOGINSTR" &
       ((i += 2))
     done
     wait
   else
-    echo "Forwarding ${mappings[*]}..."
+    echo "Forwarding ${mappings[*]}"
     ssh "${aws_ssh_opts[@]}" -N "${mappings[@]}" "$LOGINSTR"
   fi
 }

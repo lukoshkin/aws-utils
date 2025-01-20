@@ -14,6 +14,7 @@ clean-up \
 disconnect \
 add \
 init \
+home \
 install-completions \
 "
   COMPREPLY=() # is defined already, we just clear it
@@ -58,12 +59,13 @@ install-completions \
 
   connect)
     opts+="\
+  -c --cache-opts \
   -d --detach \
   -e --entrypoint= \
-  -t --revoke-time= \
   --ip= \
-  -c --cache-opts \
   -n --non-interactive \
+  -s --skip-checks \
+  -t --revoke-time= \
   "
     ;;&
 

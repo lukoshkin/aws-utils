@@ -5,6 +5,7 @@ _ec2_completions() {
     'pick:Select an instance to continue with'
     'scp-file:Transfer files to or from an EC2 instance'
     'sync:Sync the host folder on an EC2 instance with the local counterpart'
+    'execute:Execute a command on an EC2 instance'
     'porforwar:Port forward from an EC2 instance'
     'clean-up:Clear SSH inbound rules added earlier by ec2'
     'disconnect:Disconnect from an EC2 instance'
@@ -12,8 +13,8 @@ _ec2_completions() {
     'init:Create configuration files for all entries in the main.cfg'
     'info:Pull information about EC2 instances and their states'
     'ls:Alias for info, list info about EC2 instances'
+    'home:Show the path to the ec2 folder'
     'install-completions:Install completions for the ec2 command'
-    'execute:Execute a command on an EC2 instance'
   )
   _arguments -A "-*" \
     '1:Subcommand:->subcommands' \
@@ -36,12 +37,13 @@ _ec2_completions() {
       _arguments \
         "${help_option[@]}" \
         "${pick_option[@]}" \
+        '(-c --cache-opts)'{-c,--cache-opts}'[Cache these options for next connection]' \
         '(-d --detach)'{-d,--detach}'[Do not start an interactive session]' \
         '(-e --entrypoint)'{-e+,--entrypoint=}'[Command to execute after connecting]::_nothing' \
         '(--ip)--ip=[Manually specify the IP for the SSH inbound rule]' \
-        '(-t --revoke-time)'{-t+,--revoke-time=}'[Revoke the SSH inbound rule after specified seconds]::_nothing' \
-        '(-c --cache-opts)'{-c,--cache-opts}'[Cache these options for next connection]' \
-        '(-n --non-interactive)'{-n,--non-interactive}'[Run commands non-interactively]'
+        '(-n --non-interactive)'{-n,--non-interactive}'[Run commands non-interactively]' \
+        '(-s --skip-checks)'{-s,--skip-checks}'[Skip checks necessary on the first login]' \
+        '(-t --revoke-time)'{-t+,--revoke-time=}'[Revoke the SSH inbound rule after specified seconds]::_nothing'
       ;;
 
     scp-file)
