@@ -2,7 +2,7 @@
 source "$(dirname "$0")/dot.sh"
 
 help_msg() {
-  echo 'Usage: pick <INSTANCE_NUM_IN_EC2_LS>'
+  echo 'Usage: ec2 pick <INSTANCE_NUM_IN_EC2_LS>'
   echo "Pick an instance from the list of instances in the \$(ec2 ls) list."
 }
 

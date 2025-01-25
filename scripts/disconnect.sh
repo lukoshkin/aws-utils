@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
-  echo "Usage: $0 [OPTIONS]"
+  echo "Usage: ec2 disconnect [OPTIONS]"
   echo "Disconnect from an EC2 instance."
   echo
   echo "Options:"
@@ -60,7 +60,7 @@ function disconnect() {
     login::clean_up "$instance_id"
   fi
 
-  utils::set_cfg_entry logstr
+  utils::set_cfg_entry host
 }
 
 dot::manage_multiple_instances disconnect -- "$@"

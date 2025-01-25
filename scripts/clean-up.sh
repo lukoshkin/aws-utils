@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
-  echo "Usage: $0 [-p=<profile_num>|--pick=<profile_num>]"
+  echo "Usage: ec2 clean-up [-p=<profile_num>|--pick=<profile_num>]"
   echo "Undo changes to AWS resources made by ec2."
 }
 

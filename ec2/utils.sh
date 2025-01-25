@@ -7,14 +7,6 @@ EC2_FOLDER=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
 EC2_CFG_FOLDER=$EC2_FOLDER/ec2_login_opts
 EC2_CFG_MAIN=$EC2_FOLDER/main.cfg
 
-_cfg() {
-  [[ -z $1 || $1 = "$EC2_CFG_MAIN" ]] && [[ -z $EC2_CFG_FILE ]] && {
-    echo "$EC2_CFG_MAIN"
-    return
-  }
-  echo "$EC2_CFG_FOLDER/${1:-$EC2_CFG_FILE}"
-}
-
 utils::c() {
   local text=$1
   local reset="\033[0m"
@@ -79,6 +71,14 @@ utils::unique_file_by_affix() {
   if [[ -f ${file[0]} ]]; then
     realpath --relative-to "$folder" "${file[0]}"
   fi
+}
+
+_cfg() {
+  [[ -z $1 || $1 = "$EC2_CFG_MAIN" ]] && [[ -z $EC2_CFG_FILE ]] && {
+    echo "$EC2_CFG_MAIN"
+    return
+  }
+  echo "$EC2_CFG_FOLDER/${1:-$EC2_CFG_FILE}"
 }
 
 utils::get_cfg_entry() {
@@ -177,8 +177,16 @@ utils::select_option() {
   done
 }
 
+utils::login_string() {
+  local host
+  host=$(utils::get_cfg_entry host)
+  [[ -z $host ]] && return
+
+  echo "$(utils::ec2_user)@$host"
+}
+
 utils::maybe_set_login_string() {
-  msg="Using ${LOGINSTR:=$(utils::get_cfg_entry logstr)} as login string"
+  msg="Using ${LOGINSTR:=$(utils::login_string)} as login string"
   [[ -z $LOGINSTR ]] && {
     echo "No login string found"
     echo 'Did you forget to run `ec2 connect`?'

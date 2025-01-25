@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 declare -A _CHECKS
 
 function help_msg() {
-  echo "Usage: $0 [OPTIONS] SRC [DST]"
+  echo "Usage: ec2 scp-file [OPTIONS] SRC [DST]"
   echo "Transfer files and archives between the client and a host."
   echo "To copy from local to host (EC2 instance), use '-u' flag"
   echo "or prefix the whole command with 'UPLOAD=':"

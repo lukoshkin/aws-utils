@@ -4,7 +4,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 function infer_login_str() {
   local check_in_str=$1
   [[ -z $check_in_str ]] && {
-    check_in_str=$(utils::get_cfg_entry logstr)
+    check_in_str=$(utils::login_string)
     [[ -z $check_in_str ]] && return 1
     echo "$check_in_str"
   }
@@ -22,7 +22,7 @@ function infer_login_str() {
 function login::sanity_checks_and_setup_finalization() {
   local skip_checks=${_SKIP_CHECKS:-false}
   if $skip_checks; then
-    LOGINSTR=$(utils::get_cfg_entry logstr)
+    LOGINSTR=$(utils::login_string)
     [[ -n $LOGINSTR ]] && {
       echo "Using the cached login and host string.."
       utils::warn "Note this case, no guarantee the string is up to date"

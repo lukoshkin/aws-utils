@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 _help_msg() {
-  echo "Usage: $0 [OPTIONS] [login_and_host]"
+  echo "Usage: ec2 connect [OPTIONS] [login_and_host]"
   echo "Connect to the specified EC2 instance"
   echo
   echo "Options:"
@@ -14,17 +14,18 @@ _help_msg() {
   echo "  -p=<NUM>, --pick=<NUM>              Pick the instance to connect to"
   echo "  --ip IP                             Manually specify the IP for the SSH inbound rule to add"
   echo "  -t TIME, --revoke-time TIME         Specify the time in seconds to revoke the added SSH inbound rule"
-  echo "  -c, --cache-opts                    Cache the opts passed: workdir, entrypoint (-c), and the picked instance ID (-cc)"
+  echo "  -c, --cache-opts                    Cache the opts passed: workdir, entrypoint, user (-c), and the picked instance ID (-cc)"
   echo "  -n, --non-interactive               A security group auto-select (may be extended later)"
 }
 
 _update_connection_status() {
   if [[ $? -eq 0 ]]; then
+    IFS=@ read -r _ host <<<"$LOGINSTR"
     utils::set_cfg_entry connection active
-    utils::set_cfg_entry logstr "$LOGINSTR"
+    utils::set_cfg_entry host "$host"
   else
     utils::set_cfg_entry connection broken
-    utils::set_cfg_entry logstr
+    utils::set_cfg_entry host
   fi
 }
 
@@ -86,14 +87,20 @@ function connect() {
     return 2
     ;;
   c*)
-    echo 'Caching workdir and entrypoint..'
+    echo 'Caching workdir, entrypoint, and user..'
     [[ -n $workdir ]] && utils::set_cfg_entry workdir "$workdir"
-    [[ -n $EC2_USER ]] && utils::set_cfg_entry user $EC2_USER
+    [[ -n $EC2_USER ]] && utils::set_cfg_entry user "$EC2_USER"
     [[ -n $entrypoint ]] && utils::set_cfg_entry entrypoint "$entrypoint"
     ;;&
   cc*)
     echo 'Caching the picked instance ID..'
-    [[ -n $EC2_CFG_FILE ]] && utils::set_cfg_entry cfg_file "$EC2_CFG_FILE"
+    [[ -n $EC2_CFG_FILE ]] && {
+      local bak_cfg_file=$EC2_CFG_FILE
+      unset EC2_CFG_FILE  # in order to write to EC2_CFG_MAIN
+
+      utils::set_cfg_entry cfg_file "$bak_cfg_file"
+      EC2_CFG_FILE=$bak_cfg_file
+    }
     ;;
   esac
 

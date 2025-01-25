@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/init.sh"
 
 function help_msg() {
-  echo "Usage: $0 instance_id=<instance_id> [sshkey=<sshkey>] [user=<user>] [workdir=<workdir>]"
+  echo "Usage: ec2 add instance_id=<instance_id> [sshkey=<sshkey>] [user=<user>] [workdir=<workdir>]"
   echo "Register a new instance by adding a line to the maing.cfg"
   echo
   echo "Arguments:"

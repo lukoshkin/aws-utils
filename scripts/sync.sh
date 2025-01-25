@@ -4,7 +4,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
-  printf "\nUsage: %s [OPTIONS] SRC [DST]\n" "$0"
+  printf '\nUsage: ec2 sync [OPTIONS] SRC [DST]\n'
   echo "Sync DST folder on the host with the SRC folder on the client"
   echo
   echo "If DST is not provided, it defaults to SRC"

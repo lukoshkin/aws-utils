@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 function help_msg() {
-  echo "Usage: $0 [OPTIONS] COMMAND"
+  echo "Usage: ec2 execute [OPTIONS] COMMAND"
   echo "Execute a command on an EC2 instance."
   echo
   echo "Options:"
@@ -87,22 +87,25 @@ function execute::remote_command() {
 
   local exec_cmd_log=$1
   local exec_cmd_no_log=$2
+  local exec_cmd
+  exec_cmd="cd $workdir &> $ec2_log_file"
+  exec_cmd+="; bash -c '$exec_cmd_log' |& tee -a $ec2_log_file"
+  [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
+
   case $verbosity in
   vvvv*)
     utils::error "Wrong verbosity level"
     return 2
     ;;
   v*)
-    echo "Executing the command (with logging): <$exec_cmd_log>"
-    echo "Executing the second command: <$exec_cmd_no_log>"
+    echo "The command with logging: <$exec_cmd_log>"
+    echo "No-log command: <$exec_cmd_no_log>"
+    echo "Concatenation of the above : <$exec_cmd>"
     ;;&
   vv*) echo "SSH options used: ${_AWS_SSH_OPTS[*]}" ;;&
   vvv*) echo "The config file in use: $EC2_CFG_FILE" ;;
   esac
 
-  local exec_cmd
-  exec_cmd="{ cd $workdir; bash -c '$exec_cmd_log'; } |& tee -a $ec2_log_file"
-  [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
   utils::info "$SEP0"
   ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$exec_cmd"
   utils::info "$SEP0"

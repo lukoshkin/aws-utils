@@ -3,7 +3,7 @@ source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
 
 _help_msg() {
-  echo "Usage: $0 [options]"
+  echo "Usage: ec2 porforwar [options]"
   echo "Forward ports from a remote host to the client"
   echo
   echo "Options:"

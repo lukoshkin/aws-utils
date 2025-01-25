@@ -97,6 +97,10 @@ _ec2_completions() {
         '-v[Enable verbose mode]'
       ;;
 
+    info|ls) _arguments "${help_option[@]}" \
+      '(-b --non-blocking)'{-b,--non-blocking}'[Do not block the terminal while fetching the info]' \
+      ;;
+
     add) _arguments "${help_option[@]}" ;;
     install-completions) _arguments '1:Path to shellrc file:_files' ;;
     *) _message "No specific completions for this subcommand" ;;

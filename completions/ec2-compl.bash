@@ -59,14 +59,14 @@ install-completions \
 
   connect)
     opts+="\
-  -c --cache-opts \
-  -d --detach \
-  -e --entrypoint= \
-  --ip= \
-  -n --non-interactive \
-  -s --skip-checks \
-  -t --revoke-time= \
-  "
+-c --cache-opts \
+-d --detach \
+-e --entrypoint= \
+--ip= \
+-n --non-interactive \
+-s --skip-checks \
+-t --revoke-time= \
+"
     ;;&
 
   execute)
@@ -95,7 +95,8 @@ install-completions \
     ;;&
 
   add) opts="-h --help" ;;&
-  connect | execute | porforwar | clean-up | disconnect | add)
+  info | ls) opts="-h --help -b --non-blocking" ;;&
+  connect | execute | porforwar | info | ls | clean-up | disconnect | add)
     mapfile -t COMPREPLY < <(compgen -W "$opts" -- "$cur")
     ;;
 
