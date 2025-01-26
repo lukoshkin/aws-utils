@@ -13,6 +13,7 @@ porforwar \
 clean-up \
 disconnect \
 add \
+set-up-user \
 init \
 home \
 install-completions \
@@ -75,6 +76,7 @@ install-completions \
 -e --extend-session \
 -E --E= \
 -w --workdir= \
+-n --no-sep \
 -v \
 "
     ;;&
@@ -96,7 +98,7 @@ install-completions \
 
   add) opts="-h --help" ;;&
   info | ls) opts="-h --help -b --non-blocking" ;;&
-  connect | execute | porforwar | info | ls | clean-up | disconnect | add)
+  connect | execute | porforwar | info | ls | clean-up | disconnect | add | set-up-user)
     mapfile -t COMPREPLY < <(compgen -W "$opts" -- "$cur")
     ;;
 

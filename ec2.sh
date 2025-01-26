@@ -17,6 +17,9 @@ ec2() {
   init)
     bash "$scripts"/init.sh "$@"
     ;;
+  set-up-user)
+    bash "$scripts"/set_up_user.sh "$@"
+    ;;
   pick)
     bash "$scripts"/pick.sh "$@"
     ;;
@@ -45,7 +48,7 @@ ec2() {
     bash "$scripts"/porforwar.sh "$@"
     ;;
   clean-up)
-    bash "$scripts"/clean-up.sh "$@"
+    bash "$scripts"/clean_up.sh "$@"
     ;;
   install-completions)
     [[ $# -gt 1 ]] && {

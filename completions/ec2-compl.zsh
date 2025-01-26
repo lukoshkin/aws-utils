@@ -11,6 +11,7 @@ _ec2_completions() {
     'disconnect:Disconnect from an EC2 instance'
     'add:Add an entry of a new EC2 instance for further initialization'
     'init:Create configuration files for all entries in the main.cfg'
+    'set-up-user:Create a new user on an EC2 instance and set up the login w/o password'
     'info:Pull information about EC2 instances and their states'
     'ls:Alias for info, list info about EC2 instances'
     'home:Show the path to the ec2 folder'
@@ -94,14 +95,16 @@ _ec2_completions() {
         '(-e --extend-session)'{-e,--extend-session}'[Extend the session time]' \
         '(-E --E)'{-E+,--E=}'[Set session time to NUM seconds]::_numbers' \
         '(-w --workdir)'{-w+,--workdir=}'[Change to DIR before executing command]::_files -/' \
+        '(-n --no-sep)'{-n,--no-sep}'[Do not print separator before and after command output]' \
         '-v[Enable verbose mode]'
       ;;
 
     info|ls) _arguments "${help_option[@]}" \
-      '(-b --non-blocking)'{-b,--non-blocking}'[Do not block the terminal while fetching the info]' \
+      '(-b --non-blocking)'{-b,--non-blocking}'[Do not block the terminal while fetching the info]'
       ;;
 
     add) _arguments "${help_option[@]}" ;;
+    set-up-user) _arguments "${help_option[@]}" "${pick_option[@]}" ;;
     install-completions) _arguments '1:Path to shellrc file:_files' ;;
     *) _message "No specific completions for this subcommand" ;;
     esac

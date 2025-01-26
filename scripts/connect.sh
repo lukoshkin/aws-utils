@@ -96,7 +96,7 @@ function connect() {
     echo 'Caching the picked instance ID..'
     [[ -n $EC2_CFG_FILE ]] && {
       local bak_cfg_file=$EC2_CFG_FILE
-      unset EC2_CFG_FILE  # in order to write to EC2_CFG_MAIN
+      unset EC2_CFG_FILE # in order to write to EC2_CFG_MAIN
 
       utils::set_cfg_entry cfg_file "$bak_cfg_file"
       EC2_CFG_FILE=$bak_cfg_file
@@ -118,6 +118,9 @@ function connect() {
   echo "Entrypoint cmd: '$entrypoint'"
 
   export EC2_CFG_FILE EC2_USER LOGINSTR
+  ## Exporting the first two is required, the latter one is optional.
+  ## However, exporting it for the 'execute.sh' allows to suppress
+  ## the log message "Using $LOGINSTR as login string".
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
   if ! ${_SKIP_CHECKS}; then

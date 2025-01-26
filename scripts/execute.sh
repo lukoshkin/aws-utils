@@ -12,6 +12,7 @@ function help_msg() {
   echo "  -e, --extend-session          Extend the session time"
   echo "  -E=<NUM>, --E=<NUM>           Set the session-time to NUM seconds"
   echo "  -w=<DIR>, --workdir=<DIR>     Change to the specified directory before executing the command"
+  echo "  -n, --no-sep                  Do not print the separator before and after the command output"
   echo "  -v                            Verbose mode"
 }
 
@@ -20,8 +21,8 @@ function execute::remote_command() {
   dot::light_pick "$@" || return $?
   eval set -- "${_OTHER_ARGS[*]}"
 
-  local long_opts="help,extend-session,workdir:,ssh-opts-string:"
-  local short_opts="h,e,A,v,E:,w:"
+  local long_opts="help,no-sep,extend-session,workdir:,ssh-opts-string:"
+  local short_opts="h,n,e,A,v,E:,w:"
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
@@ -31,6 +32,7 @@ function execute::remote_command() {
 
   local workdir extend_session_time=600
   local forward_ssh_agent=false extend_count=0 verbosity=''
+  local nosep=false
   while [[ $1 != -- ]]; do
     case $1 in
     -h | --help)
@@ -51,6 +53,7 @@ function execute::remote_command() {
       shift
       ;;&
     -e | --extend-session) ((extend_count++)) ;;&
+    -n | --no-sep) nosep=true ;;&
     -A) forward_ssh_agent=true ;;&
     -v) verbosity+=v ;;&
     *) shift ;;
@@ -78,6 +81,8 @@ function execute::remote_command() {
     _AWS_SSH_OPTS+=(-o ServerAliveCountMax="$extend_count")
   fi
 
+  ## The check on the empty var is not to duplicate
+  ## the log message when using in the other script.
   [[ -z $LOGINSTR ]] && utils::maybe_set_login_string
   [[ $# -gt 2 ]] && {
     echo "Too many arguments"
@@ -106,9 +111,9 @@ function execute::remote_command() {
   vvv*) echo "The config file in use: $EC2_CFG_FILE" ;;
   esac
 
-  utils::info "$SEP0"
+  $nosep || utils::info "$SEP0"
   ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$exec_cmd"
-  utils::info "$SEP0"
+  $nosep || utils::info "$SEP0"
 }
 
 ## NOTE: might be extended to executing commands across multiple instances

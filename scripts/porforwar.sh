@@ -50,7 +50,7 @@ forward_port() {
     esac
   done
 
-  [[ -z $LOGINSTR ]] && utils::maybe_set_login_string
+  utils::maybe_set_login_string
 
   declare -a aws_ssh_opts
   aws_ssh_opts=(-i "$(utils::get_cfg_entry sshkey)" "${AWS_SSH_OPTS[@]}")

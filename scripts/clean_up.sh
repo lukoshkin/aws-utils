@@ -12,7 +12,8 @@ function clean_up() {
   dot::light_pick "$@" || return $?
   [[ ${#_OTHER_ARGS[@]} -gt 0 ]] && {
     local ec=0
-    if ! [[ ${_OTHER_ARGS[*]} =~ -h|--help ]]; then
+    ## NOTE: parse_one_option from brave_utils.sh adds quotes ''
+    if ! [[ ${_OTHER_ARGS[*]} =~ ^\'(-h|--help)\'$ ]]; then
       utils::error "Currently, no other than --pick arguments are supported."
       ec=2
     fi
