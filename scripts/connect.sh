@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/dot.sh"
 source "$LIB_DIR/aws-login.sh"
+_TIMEOUT=5
 
 _help_msg() {
   echo "Usage: ec2 connect [OPTIONS] [login_and_host]"
@@ -19,7 +20,7 @@ _help_msg() {
 }
 
 _update_connection_status() {
-  if [[ $? -eq 0 ]]; then
+  if [[ ${_EC:-$?} -eq 0 ]]; then
     IFS=@ read -r _ host <<<"$LOGINSTR"
     utils::set_cfg_entry connection active
     utils::set_cfg_entry host "$host"
@@ -115,7 +116,7 @@ function connect() {
   echo -n "The selected instance name: "
   echo -e "$(utils::c "$(cut -d% -f2 <<<"$EC2_CFG_FILE")" 37 1)"
   echo "Working directory is '$workdir'"
-  echo "Entrypoint cmd: '$entrypoint'"
+  echo "Entrypoint cmd: ▶$entrypoint◀"
 
   export EC2_CFG_FILE EC2_USER LOGINSTR
   ## Exporting the first two is required, the latter one is optional.
@@ -124,20 +125,22 @@ function connect() {
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
   if ! ${_SKIP_CHECKS}; then
-    local _ending
-    _ending=$(timeout 5 bash "$SCRIPT_DIR"/execute.sh "echo" | tail -1)
-    _ending=$(sed -E 's/\x1B\[[0-9;]*m//g' <<<"$_ending")
-    [[ $_ending = "$SEP0" ]] && _update_connection_status
+    local _ping _pong
+    _ping=$(uuidgen)
+    _pong=$(timeout $_TIMEOUT bash "$SCRIPT_DIR"/execute.sh -n "echo $_ping")
+    [[ $_pong == "$_ping" ]]
+    _update_connection_status
   fi
 
   if ! $detach; then
-    # -t to set a working directory and run interactive session from it
-    # -A to forward your '.ssh' folder on the remote machine
+    ## -t to set a working directory and run interactive session from it
+    ## -A to forward your '.ssh' folder on the remote machine
+    { sleep $((_TIMEOUT + 1)) && _update_connection_status; } &
     bash "$SCRIPT_DIR"/execute.sh -w "$workdir" \
-      --ssh-opts-string='-tA -o ServerAliveInterval=100' \
+      --ssh-opts-string="-tA -o ServerAliveInterval=100 -o ConnectTimeout=$_TIMEOUT" \
       "$entrypoint" "exec \$SHELL"
+    _EC=$?
   fi
-  _update_connection_status
   echo "Detaching.."
 }
 

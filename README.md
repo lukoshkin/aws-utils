@@ -184,13 +184,14 @@ To be used in `main.cfg`:
   target user on the remote host.
 
   ```bash
-  ec2 connect
-  adduser foreign
-  sudo cp -r ~/.ssh /home/foreign
-  sudo chown -R foreign:foreign /home/foreign/.ssh
-  ## Another approach is to use rsync
+  ## Adding a user 'foreign' for the default connection/instance
+  ec2 set-up-user foreign
 
-  <Ctrl-d>
+  ## Does under the hood something like
+  # ec2 connect
+  # adduser foreign
+  # sudo cp -r ~/.ssh /home/foreign
+  # sudo chown -R foreign:foreign /home/foreign/.ssh
 
   ## After adding "user: foreign" to your configuration file (~/ec2_login_opts/<cfg_file>)
   ec2 connect -u foreign
@@ -224,5 +225,6 @@ ec2 install-completions <shellrc_file>
 - [x] Manage more than one EC2 instance
 - [x] Rewrite to use a separate config for each instance
 - [x] Update README after finishing multi-instance management feature
+- [x] Automate configuration of non-default (not 'ubuntu') user
 - [ ] Add a GIF with a demo
 - [ ] Rename/move/migrate to "aws-cli-utils"?

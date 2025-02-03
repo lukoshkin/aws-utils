@@ -16,10 +16,10 @@ function info() {
     pk::peek
     return $?
   }
-  if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  if [[ $1 == '-h' || $1 == '--help' ]]; then
     help_msg
     return 0
-  elif [[ "$1" == "-b" || "$1" == "--non-blocking" ]]; then
+  elif [[ $1 == '-b' || $1 == '--non-blocking' ]]; then
     (
       local flag=true
       while read -r line; do

@@ -103,9 +103,9 @@ function execute::remote_command() {
     return 2
     ;;
   v*)
-    echo "The command with logging: <$exec_cmd_log>"
-    echo "No-log command: <$exec_cmd_no_log>"
-    echo "Concatenation of the above : <$exec_cmd>"
+    echo "The command with logging: ▶$exec_cmd_log◀"
+    echo "No-log command: ▶$exec_cmd_no_log◀"
+    echo "Concatenation of the above : ▶$exec_cmd◀"
     ;;&
   vv*) echo "SSH options used: ${_AWS_SSH_OPTS[*]}" ;;&
   vvv*) echo "The config file in use: $EC2_CFG_FILE" ;;

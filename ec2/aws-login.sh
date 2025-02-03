@@ -25,7 +25,7 @@ function login::sanity_checks_and_setup_finalization() {
     LOGINSTR=$(utils::login_string)
     [[ -n $LOGINSTR ]] && {
       echo "Using the cached login and host string.."
-      utils::warn "Note this case, no guarantee the string is up to date"
+      utils::warn "Note in this case, no guarantee the string is up to date"
       echo "For a safer login, omit the '-s' flag."
       return
     }
@@ -67,6 +67,7 @@ function login::sanity_checks_and_setup_finalization() {
     if ! [[ $ip4 = 0.0.0.0/0 ]]; then
       utils::error "The current IP address is not white-listed"
       utils::set_cfg_entry connection "blocked"
+      return 1
     fi
   fi
 
