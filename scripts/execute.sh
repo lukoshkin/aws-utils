@@ -30,7 +30,7 @@ function execute::remote_command() {
   }
   eval set -- "$params"
 
-  local workdir extend_session_time=600
+  local workdir extend_session_time=100
   local forward_ssh_agent=false extend_count=0 verbosity=''
   local nosep=false
   while [[ $1 != -- ]]; do
@@ -111,9 +111,12 @@ function execute::remote_command() {
   vvv*) echo "The config file in use: $EC2_CFG_FILE" ;;
   esac
 
+  local ec
   $nosep || utils::info "$SEP0"
   ssh -A "${_AWS_SSH_OPTS[@]}" "$LOGINSTR" "$exec_cmd"
+  ec=$?
   $nosep || utils::info "$SEP0"
+  return $ec
 }
 
 ## NOTE: might be extended to executing commands across multiple instances

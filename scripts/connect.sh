@@ -20,7 +20,7 @@ _help_msg() {
 }
 
 _update_connection_status() {
-  if [[ ${_EC:-$?} -eq 0 ]]; then
+  if [[ $? -eq 0 ]]; then
     IFS=@ read -r _ host <<<"$LOGINSTR"
     utils::set_cfg_entry connection active
     utils::set_cfg_entry host "$host"
@@ -124,22 +124,34 @@ function connect() {
   ## the log message "Using $LOGINSTR as login string".
   _AWS_SSH_OPTS=(-i "$(utils::get_cfg_entry sshkey)" "${_AWS_SSH_OPTS[@]}")
 
-  if ! ${_SKIP_CHECKS}; then
-    local _ping _pong
-    _ping=$(uuidgen)
-    _pong=$(timeout $_TIMEOUT bash "$SCRIPT_DIR"/execute.sh -n "echo $_ping")
-    [[ $_pong == "$_ping" ]]
-    _update_connection_status
-  fi
-
-  if ! $detach; then
+  if $detach; then
+    if ! ${_SKIP_CHECKS}; then
+      local _ping _pong
+      _ping=$(uuidgen)
+      _pong=$(timeout $_TIMEOUT bash "$SCRIPT_DIR"/execute.sh -n "echo $_ping")
+      [[ $_ping == "$_pong" ]]
+      _update_connection_status
+    fi
+  else
     ## -t to set a working directory and run interactive session from it
     ## -A to forward your '.ssh' folder on the remote machine
-    { sleep $((_TIMEOUT + 1)) && _update_connection_status; } &
+    local ec2_fifo ec2_log_file
+    ec2_log_file=$(utils::ec2_log_file)
+    ec2_fifo="$(utils::unique_base)_fifo"
+    mkfifo "$ec2_fifo" 2>"$ec2_log_file" # named pipe
+
+    (
+      sleep $((_TIMEOUT + 1))
+      read -r ec <"$ec2_fifo"
+      [[ $ec -ne 255 ]]
+      _update_connection_status
+    ) &
     bash "$SCRIPT_DIR"/execute.sh -w "$workdir" \
       --ssh-opts-string="-tA -o ServerAliveInterval=100 -o ConnectTimeout=$_TIMEOUT" \
       "$entrypoint" "exec \$SHELL"
-    _EC=$?
+
+    echo $? >"$ec2_fifo"
+    rm "$ec2_fifo" 2>"$ec2_log_file"
   fi
   echo "Detaching.."
 }

@@ -133,8 +133,12 @@ function utils::ec2_user() {
   echo "${EC2_USER:-ubuntu}"
 }
 
+function utils::unique_base() {
+  echo "/tmp/ec2_$USER-$(utils::ec2_user)"
+}
+
 function utils::ec2_log_file() {
-  echo "/tmp/ec2_$USER-$(utils::ec2_user)-last_login.log"
+  echo "$(utils::unique_base)-last_login.log"
 }
 
 declare -a AWS_SSH_OPTS=(
