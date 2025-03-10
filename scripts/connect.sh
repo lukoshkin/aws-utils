@@ -142,9 +142,13 @@ function connect() {
 
     (
       sleep $((_TIMEOUT + 1))
-      read -r ec <"$ec2_fifo"
-      [[ $ec -ne 255 ]]
-      _update_connection_status
+      if [[ -e $ec2_fifo ]]; then
+        read -r ec <"$ec2_fifo"
+        [[ $ec -ne 255 ]]
+        _update_connection_status
+      else
+        utils::warn "No fifo channel was created"
+      fi
     ) &
     bash "$SCRIPT_DIR"/execute.sh -w "$workdir" \
       --ssh-opts-string="-tA -o ServerAliveInterval=100 -o ConnectTimeout=$_TIMEOUT" \

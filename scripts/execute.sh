@@ -21,8 +21,8 @@ function execute::remote_command() {
   dot::light_pick "$@" || return $?
   eval set -- "${_OTHER_ARGS[*]}"
 
-  local long_opts="help,no-sep,extend-session,workdir:,ssh-opts-string:"
-  local short_opts="h,n,e,A,v,E:,w:"
+  local long_opts="help,no-sep,simple,extend-session,workdir:,ssh-opts-string:"
+  local short_opts="h,n,s,e,A,v,E:,w:"
   local params
   params=$(getopt -o $short_opts -l $long_opts --name "$0" -- "$@") || {
     echo Aborting..
@@ -30,7 +30,7 @@ function execute::remote_command() {
   }
   eval set -- "$params"
 
-  local workdir extend_session_time=100
+  local workdir simple=false extend_session_time=100
   local forward_ssh_agent=false extend_count=0 verbosity=''
   local nosep=false
   while [[ $1 != -- ]]; do
@@ -42,6 +42,9 @@ function execute::remote_command() {
     -w | --workdir)
       workdir=$2
       shift
+      ;;&
+    -s | --simple)
+      simple=true
       ;;&
     --E)
       extend_session_time=$2
@@ -93,15 +96,20 @@ function execute::remote_command() {
   local exec_cmd_log=$1
   local exec_cmd_no_log=$2
   local exec_cmd
-  exec_cmd="cd $workdir &> $ec2_log_file"
-  exec_cmd+="; bash -c '$exec_cmd_log' |& tee -a $ec2_log_file"
-  [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
+  if $simple; then
+    exec_cmd="cd $workdir && $exec_cmd_log"
+    [[ $# -gt 1 ]] && {
+      utils::error "The second argument is not supported in the simple mode"
+      return 2
+    }
+  else
+    exec_cmd="cd $workdir &> $ec2_log_file"
+    exec_cmd+="; bash -c '$exec_cmd_log' |& tee -a $ec2_log_file"
+    [[ -n $exec_cmd_no_log ]] && exec_cmd+="; $exec_cmd_no_log"
+  fi
 
   case $verbosity in
-  vvvv*)
-    utils::error "Wrong verbosity level"
-    return 2
-    ;;
+  vvvv*) utils::warn "Wrong verbosity level" ;;
   v*)
     echo "The command with logging: ▶$exec_cmd_log◀"
     echo "No-log command: ▶$exec_cmd_no_log◀"
